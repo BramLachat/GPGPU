@@ -1,5 +1,5 @@
 #include <stdio.h>
-#define SIZE	100000000
+#define SIZE	1024
 
 void VectorAdd(int *a, int *b, int *c, int n)
 {

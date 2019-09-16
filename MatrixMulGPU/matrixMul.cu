@@ -1,5 +1,5 @@
 #include <stdio.h>
-#define SIZE	100000000
+#define SIZE	1024
 
 __global__ void VectorAdd(int *a, int *b, int *c, int n)
 {
@@ -26,7 +26,7 @@ int main()
 		c[i] = 0;
 	}
 
-	VectorAdd <<<4, SIZE/4>>> (a, b, c, SIZE);
+	VectorAdd <<<1, SIZE>>> (a, b, c, SIZE);
 
 	cudaDeviceSynchronize();
 
