@@ -4,7 +4,7 @@
 #include "parse_stl.h"
 
 int main(int argc, char* argv[]) {
-	std::string stl_file_name = "./Box1x1x1.stl";
+	std::string stl_file_name = "Box.stl";
 
 	if (argc == 2) {
 		stl_file_name = argv[1];
@@ -13,6 +13,7 @@ int main(int argc, char* argv[]) {
 		std::cout << "ERROR: Too many command line arguments" << std::endl;
 	}
 
+	//Only reads STL-file in binary format!!!
 	auto info = stl::parse_stl(stl_file_name);
 
 	std::vector<stl::triangle> triangles = info.triangles;
