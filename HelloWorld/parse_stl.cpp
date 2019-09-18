@@ -5,6 +5,7 @@
 #include <streambuf>
 
 #include "parse_stl.h"
+#include "Mesh.h"
 
 namespace stl {
 
