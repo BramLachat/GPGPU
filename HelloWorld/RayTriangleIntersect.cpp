@@ -5,6 +5,7 @@
 /* by Tomas Moller, May 2000                        */
 
 #include <math.h>
+#include <iostream>
 
 #include "RayTriangleIntersect.h"
 
@@ -208,6 +209,9 @@ namespace Intersection {
 		float vert0[3], float vert1[3], float vert2[3],
 		float* t, float* u, float* v)
 	{
+		//std::cout << vert0[0] << ", " << vert0[1] << ", " << vert0[2] << std::endl;
+		//std::cout << vert1[0] << ", " << vert1[1] << ", " << vert1[2] << std::endl;
+		//std::cout << vert2[0] << ", " << vert2[1] << ", " << vert2[2] << std::endl;
 		float edge1[3], edge2[3], tvec[3], pvec[3], qvec[3];
 		float det, inv_det;
 
@@ -257,7 +261,14 @@ namespace Intersection {
 		(*u) *= inv_det;
 		(*v) *= inv_det;
 
-		return 1;
+		if (*t > 0)
+		{
+			return 1;
+		}
+		else
+		{
+			return 0;
+		}
 	}
 
 }

@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 
+#include "Mesh.h"
+
 namespace stl {
 
 	struct point {
@@ -33,7 +35,7 @@ namespace stl {
 		stl_data(std::string namep) : name(namep) {}
 	};
 
-	stl_data parse_stl(const std::string& stl_path);
+	std::unique_ptr<Mesh> parse_stl(const std::string& stl_path);
 
 }
 

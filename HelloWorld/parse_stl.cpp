@@ -3,9 +3,12 @@
 #include <iostream>
 #include <sstream>
 #include <streambuf>
+#include <memory>
 
 #include "parse_stl.h"
 #include "Mesh.h"
+#include "Triangle.h"
+#include "Vertex.h"
 
 namespace stl {
 
@@ -30,14 +33,15 @@ namespace stl {
 		return *fptr;
 	}
 
-	point parse_point(std::ifstream& s) {
+	Vertex parse_point(std::ifstream& s) {
 		float x = parse_float(s);
 		float y = parse_float(s);
 		float z = parse_float(s);
-		return point(x, y, z);
+		Vertex v(x, y, z);
+		return v;
 	}
 
-	stl_data parse_stl(const std::string& stl_path) {
+	std::unique_ptr<Mesh> parse_stl(const std::string& stl_path) {
 		std::ifstream stl_file(stl_path.c_str(), std::ios::in | std::ios::binary);
 		if (!stl_file) {
 			std::cout << "ERROR: COULD NOT READ FILE" << std::endl;
@@ -49,19 +53,37 @@ namespace stl {
 		stl_file.read(header_info, 80);
 		stl_file.read(n_triangles, 4);
 		std::string h(header_info);
-		stl_data info(h);
-		unsigned int* r = (unsigned int*)n_triangles;
-		unsigned int num_triangles = *r;
-		for (unsigned int i = 0; i < num_triangles; i++) {
-			auto normal = parse_point(stl_file);
-			auto v1 = parse_point(stl_file);
-			auto v2 = parse_point(stl_file);
-			auto v3 = parse_point(stl_file);
-			info.triangles.push_back(triangle(normal, v1, v2, v3));
+		unsigned int* num_triangles = (unsigned int*)n_triangles;
+		std::unique_ptr<Mesh> mesh = std::make_unique<Mesh>(h, *num_triangles);
+		Triangle t;
+		Vertex v;
+		for (unsigned int i = 0; i < *num_triangles; i++) {
+			v = parse_point(stl_file); //normalvector --> wordt niet gebruikt!
+			int duplicateVertexIndex;
+			for (int i = 0; i < 3; i++)
+			{
+				v = parse_point(stl_file);
+				duplicateVertexIndex = mesh->findDuplicate(v);
+				if (duplicateVertexIndex == -1)
+				{
+					mesh->addVertex(v);
+					t.addVertexIndex(mesh->getLastVertex());
+				}
+				else
+				{
+					t.addVertexIndex(duplicateVertexIndex);
+				}
+			}
+			mesh->addTriangle(t);
+			t.clear();
 			char dummy[2];
 			stl_file.read(dummy, 2);
 		}
-		return info;
+		std::cout << "copies" << Vertex::copies << std::endl;
+		mesh->resize();
+		std::cout << "copies" << Vertex::copies << std::endl;
+		Vertex::copies = 0;
+		return mesh;
 	}
 
 }

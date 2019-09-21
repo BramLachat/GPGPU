@@ -106,12 +106,14 @@
     <ClCompile Include="parse_stl.cpp" />
     <ClCompile Include="RayTriangleIntersect.cpp" />
     <ClCompile Include="Triangle.cpp" />
+    <ClCompile Include="Vertex.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="RayTriangleIntersect.h" />
     <ClInclude Include="parse_stl.h" />
     <ClInclude Include="Triangle.h" />
+    <ClInclude Include="Vertex.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
