@@ -85,7 +85,7 @@ void Mesh::findIntersections(float dir[3], std::unique_ptr<Mesh>& innerMesh)
 				numberOfIntersections++;
 			}
 		}
-		//std::cout << "aantal intersecties = " << numberOfIntersections << std::endl;
+		std::cout << "aantal intersecties = " << numberOfIntersections << std::endl;
 		if (numberOfIntersections % 2 == 0)
 		{
 			inside = false;

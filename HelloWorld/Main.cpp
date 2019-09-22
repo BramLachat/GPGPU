@@ -6,8 +6,8 @@
 #include "parse_stl.h"
 
 int main(int argc, char* argv[]) {
-	std::string stl_file_inside = "BB_BallBin.stl";
-	std::string stl_file_outside = "SphericonBin.stl";
+	std::string stl_file_inside = "Box_Centered_Small_Bin.stl";
+	std::string stl_file_outside = "Box_Centered_Big_Bin.stl";
 
 	if (argc == 2) {
 		stl_file_inside = argv[1];
@@ -31,7 +31,7 @@ int main(int argc, char* argv[]) {
 
 	//triangleMesh_Ball.schrijf();
 
-	float direction[3] = {0.0, 0.0, 100.0};
+	float direction[3] = {0.5, 1.0, -0.5};
 
 	//2 opties om unique ptr mee te geven als argument aan een functie:
 	//https://stackoverflow.com/questions/30905487/how-can-i-pass-stdunique-ptr-into-a-function
