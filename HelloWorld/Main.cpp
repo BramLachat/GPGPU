@@ -1,13 +1,18 @@
 #include <cassert>
 #include <iostream>
+#include <chrono>
 //#include <memory> //needed for smart pointers
 
 #include "Mesh.h"
 #include "parse_stl.h"
 
 int main(int argc, char* argv[]) {
-	std::string stl_file_inside = "Hull_GravBin.stl";
-	std::string stl_file_outside = "Hull_Grav_BigBin.stl";
+	std::string stl_file_inside; //= "Hull_GravBin.stl";
+	std::string stl_file_outside; //= "Hull_Grav_BigBin.stl";
+	std::cout << "Enter filename of inside mesh:" << std::endl;
+	std::cin >> stl_file_inside;
+	std::cout << "Enter filename of outside mesh:" << std::endl;
+	std::cin >> stl_file_outside;
 
 	if (argc == 2) {
 		stl_file_inside = argv[1];
@@ -45,5 +50,17 @@ int main(int argc, char* argv[]) {
 
 	//2 opties om unique ptr mee te geven als argument aan een functie:
 	//https://stackoverflow.com/questions/30905487/how-can-i-pass-stdunique-ptr-into-a-function
+
+	auto start = std::chrono::high_resolution_clock::now(); //start time measurement
+
 	triangleMesh_Outside->findIntersections(direction, triangleMesh_Inside);
+	
+	auto end = std::chrono::high_resolution_clock::now(); //stop time measurement
+	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+	std::cout << "Time = " << duration << "ms" << std::endl;
+
+	std::cout << "Press Enter to quit program!" << std::endl;
+	std::cin.get();
+	std::cin.get();
+	return 0;
 }

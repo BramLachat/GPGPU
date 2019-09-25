@@ -6,18 +6,18 @@
 int Vertex::copies = 0;
 Vertex::Vertex()
 {
-	point = new float[3];
+	point[0] = 0; point[1] = 0; point[2] = 0;
 }
 Vertex::Vertex(float x, float y, float z)
 {
-	point = new float[3];
+	//point = new float[3];
 	point[0] = x;
 	point[1] = y;
 	point[2] = z;
 }
-Vertex::Vertex(const Vertex& v)
+Vertex::Vertex(const Vertex& v) //copyconstructor
 {
-	point = new float[3];
+	//point = new float[3];
 //	memcpy(point, v.point, 3);
 	point[0] = v.point[0];
 	point[1] = v.point[1];
@@ -25,14 +25,15 @@ Vertex::Vertex(const Vertex& v)
 	//std::cout << "Copied" << std::endl;
 	Vertex::copies++;
 }
-Vertex& Vertex::operator=(const Vertex& v)
+Vertex& Vertex::operator=(const Vertex& v) //copy-assignment
 {
 	if (this != &v) {
-		if (point != nullptr) delete[] point;
-		point = new float[3];
+		//if (point != nullptr) delete[] point;
+		//point = new float[3];
 		point[0] = v.point[0];
 		point[1] = v.point[1];
 		point[2] = v.point[2];
+		return *this;
 	}
 	else {
 		return *this;
@@ -64,10 +65,10 @@ float* Vertex::getCoordinates()
 {
 	return point;
 }
-Vertex::~Vertex()
+/*Vertex::~Vertex()
 {
 	delete[] point;
-}
+}*/
 void Vertex::schrijf()
 {
 	std::cout << point[0] << ", " << point[1] << ", " << point[2] << std::endl;
