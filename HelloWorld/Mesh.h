@@ -23,7 +23,7 @@ public:
 	void findIntersections(float dir[3], std::unique_ptr<Mesh>& innerMesh);
 	int getLastVertex();
 	void schrijf();
-	//Vertex getVertexByIndex(int index);
+	Vertex* getVertexAtIndex(int index);
 	void resize();
 };
 #endif // !MESH_H

@@ -34,14 +34,24 @@ void Mesh::addVertex(const Vertex& v)
 }
 int Mesh::findDuplicate(const Vertex& v)
 {
-	for(std::size_t i = 0 ; i < vertices.size() ; i++)
+	std::vector<Vertex>::iterator it = std::find(vertices.begin(), vertices.end(), v);
+	if (it != vertices.end())//returned index of last value if nothing found!
+	{
+		return std::distance(vertices.begin(), it);
+	}
+	else
+	{
+		return -1;
+	}
+
+	/*for(std::size_t i = 0 ; i < vertices.size() ; i++)//	SLOW!!!
 	{
 		if (v.isDuplicate(vertices.at(i)))
 		{
 			return (int)i;
 		}
 	}
-	return -1;
+	return -1;*/
 }
 void Mesh::findIntersections(float dir[3], std::unique_ptr<Mesh>& innerMesh)
 {
@@ -85,7 +95,7 @@ void Mesh::findIntersections(float dir[3], std::unique_ptr<Mesh>& innerMesh)
 				numberOfIntersections++;
 			}
 		}
-		std::cout << "aantal intersecties = " << numberOfIntersections << std::endl;
+		//std::cout << "aantal intersecties = " << numberOfIntersections << std::endl;
 		if (numberOfIntersections % 2 == 0)
 		{
 			inside = false;
@@ -111,10 +121,10 @@ void Mesh::schrijf()
 		std::cout << std::endl;
 	}
 }
-/*Vertex Mesh::getVertexByIndex(int index)
+Vertex* Mesh::getVertexAtIndex(int index)
 {
-	return vertices.at(index);
-}*/
+	return &(vertices.at(index));
+}
 void Mesh::resize()
 {
 	vertices.shrink_to_fit();

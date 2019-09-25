@@ -6,8 +6,8 @@
 #include "parse_stl.h"
 
 int main(int argc, char* argv[]) {
-	std::string stl_file_inside = "Box_Centered_Small_Bin.stl";
-	std::string stl_file_outside = "Box_Centered_Big_Bin.stl";
+	std::string stl_file_inside = "Hull_GravBin.stl";
+	std::string stl_file_outside = "Hull_Grav_BigBin.stl";
 
 	if (argc == 2) {
 		stl_file_inside = argv[1];
@@ -18,22 +18,32 @@ int main(int argc, char* argv[]) {
 
 	//Only reads STL-file in binary format!!!
 	std::cout << "lezen" << std::endl;
-	std::unique_ptr<Mesh> triangleMesh_Cube = stl::parse_stl(stl_file_inside);
-	std::unique_ptr<Mesh> triangleMesh_Ball = stl::parse_stl(stl_file_outside);
+	std::unique_ptr<Mesh> triangleMesh_Inside = stl::parse_stl(stl_file_inside);
+	std::unique_ptr<Mesh> triangleMesh_Outside = stl::parse_stl(stl_file_outside);
 
-	std::cout << "STL HEADER = " << triangleMesh_Cube->getName() << std::endl;
-	std::cout << "# triangles = " << triangleMesh_Cube->getNumberOfTriangles() << std::endl;
+	std::cout << "STL HEADER = " << triangleMesh_Inside->getName() << std::endl;
+	std::cout << "# triangles = " << triangleMesh_Inside->getNumberOfTriangles() << std::endl;
 
-	//triangleMesh_Cube.schrijf();
+	//triangleMesh_Inside.schrijf();
 
-	std::cout << "STL HEADER = " << triangleMesh_Ball->getName() << std::endl;
-	std::cout << "# triangles = " << triangleMesh_Ball->getNumberOfTriangles() << std::endl;
+	std::cout << "STL HEADER = " << triangleMesh_Outside->getName() << std::endl;
+	std::cout << "# triangles = " << triangleMesh_Outside->getNumberOfTriangles() << std::endl;
 
-	//triangleMesh_Ball.schrijf();
+	//triangleMesh_Outside.schrijf();
 
-	float direction[3] = {0.5, 1.0, -0.5};
+	Vertex* V1 = triangleMesh_Outside->getVertexAtIndex(0);
+	Vertex* V2 = triangleMesh_Outside->getVertexAtIndex(1);
+	Vertex* V3 = triangleMesh_Outside->getVertexAtIndex(2);
+
+	float xCenter = (V1->getCoordinates()[0] + V2->getCoordinates()[0] + V3->getCoordinates()[0])/3;
+	float yCenter = (V1->getCoordinates()[1] + V2->getCoordinates()[1] + V3->getCoordinates()[1])/3;
+	float zCenter = (V1->getCoordinates()[2] + V2->getCoordinates()[2] + V3->getCoordinates()[2])/3;
+
+	float direction[3] = { xCenter, yCenter, zCenter };
+
+	std::cout << "direction = " << direction[0] << ", " << direction[1] << ", " << direction[2] << std::endl;
 
 	//2 opties om unique ptr mee te geven als argument aan een functie:
 	//https://stackoverflow.com/questions/30905487/how-can-i-pass-stdunique-ptr-into-a-function
-	triangleMesh_Ball->findIntersections(direction, triangleMesh_Cube);
+	triangleMesh_Outside->findIntersections(direction, triangleMesh_Inside);
 }

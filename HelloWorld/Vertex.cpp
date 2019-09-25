@@ -38,6 +38,17 @@ Vertex& Vertex::operator=(const Vertex& v)
 		return *this;
 	}
 }
+bool Vertex::operator==(const Vertex& v)
+{
+	if (v.point[0] == point[0] && v.point[1] == point[1] && v.point[2] == point[2])
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+}
 bool Vertex::isDuplicate(const Vertex& v) const
 {
 	if (v.point[0] == point[0] && v.point[1] == point[1] && v.point[2] == point[2])
