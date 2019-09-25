@@ -1,6 +1,8 @@
 #ifndef VERTEX_H
 #define VERTEX_H
 
+#include <string>
+
 class Vertex
 {
 private:
@@ -15,6 +17,7 @@ public:
 	bool isDuplicate(const Vertex& v) const;
 	float* getCoordinates();
 	void schrijf();
+	std::string toString() const;
 	//~Vertex();
 };
 #endif

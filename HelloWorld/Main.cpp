@@ -7,12 +7,12 @@
 #include "parse_stl.h"
 
 int main(int argc, char* argv[]) {
-	std::string stl_file_inside; //= "Hull_GravBin.stl";
-	std::string stl_file_outside; //= "Hull_Grav_BigBin.stl";
-	std::cout << "Enter filename of inside mesh:" << std::endl;
+	std::string stl_file_inside = "Hull_GravBin.stl";
+	std::string stl_file_outside = "Hull_Grav_BigBin.stl";
+	/*std::cout << "Enter filename of inside mesh:" << std::endl;
 	std::cin >> stl_file_inside;
 	std::cout << "Enter filename of outside mesh:" << std::endl;
-	std::cin >> stl_file_outside;
+	std::cin >> stl_file_outside;*/
 
 	if (argc == 2) {
 		stl_file_inside = argv[1];
@@ -48,11 +48,10 @@ int main(int argc, char* argv[]) {
 
 	std::cout << "direction = " << direction[0] << ", " << direction[1] << ", " << direction[2] << std::endl;
 
-	//2 opties om unique ptr mee te geven als argument aan een functie:
-	//https://stackoverflow.com/questions/30905487/how-can-i-pass-stdunique-ptr-into-a-function
-
 	auto start = std::chrono::high_resolution_clock::now(); //start time measurement
 
+	//2 opties om unique ptr mee te geven als argument aan een functie:
+	//https://stackoverflow.com/questions/30905487/how-can-i-pass-stdunique-ptr-into-a-function
 	triangleMesh_Outside->findIntersections(direction, triangleMesh_Inside);
 	
 	auto end = std::chrono::high_resolution_clock::now(); //stop time measurement

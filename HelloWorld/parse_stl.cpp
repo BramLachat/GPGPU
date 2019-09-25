@@ -64,6 +64,7 @@ namespace stl {
 			{
 				v = parse_point(stl_file);
 				duplicateVertexIndex = mesh->findDuplicate(v);
+				mesh->addVertexIndex(v.toString(), mesh->getNumberOfVertices());
 				if (duplicateVertexIndex == -1)
 				{
 					mesh->addVertex(v);

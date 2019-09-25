@@ -2,6 +2,7 @@
 #include <iostream>
 
 #include "Vertex.h"
+#include <string>
 
 int Vertex::copies = 0;
 Vertex::Vertex()
@@ -72,4 +73,8 @@ float* Vertex::getCoordinates()
 void Vertex::schrijf()
 {
 	std::cout << point[0] << ", " << point[1] << ", " << point[2] << std::endl;
+}
+std::string Vertex::toString() const
+{
+	return std::to_string(point[0]) + std::to_string(point[1]) + std::to_string(point[2]);
 }

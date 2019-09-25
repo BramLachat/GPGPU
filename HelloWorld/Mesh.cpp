@@ -1,6 +1,8 @@
 #include <vector>
 #include <string>
 #include <iostream>
+#include <iterator>
+#include <map>
 
 #include "Mesh.h"
 #include "RayTriangleIntersect.h"
@@ -34,7 +36,17 @@ void Mesh::addVertex(const Vertex& v)
 }
 int Mesh::findDuplicate(const Vertex& v)
 {
-	std::vector<Vertex>::iterator it = std::find(vertices.begin(), vertices.end(), v);
+	std::map<std::string, int>::iterator itr = VertexIndices.find(v.toString());
+	if (itr != VertexIndices.end())
+	{
+		return itr->second;
+	}
+	else
+	{
+		return -1;
+	}
+
+	/*std::vector<Vertex>::iterator it = std::find(vertices.begin(), vertices.end(), v);
 	if (it != vertices.end())//returned index of last value if nothing found!
 	{
 		return std::distance(vertices.begin(), it);
@@ -42,16 +54,7 @@ int Mesh::findDuplicate(const Vertex& v)
 	else
 	{
 		return -1;
-	}
-
-	/*for(std::size_t i = 0 ; i < vertices.size() ; i++)//	SLOW!!!
-	{
-		if (v.isDuplicate(vertices.at(i)))
-		{
-			return (int)i;
-		}
-	}
-	return -1;*/
+	}*/
 }
 void Mesh::findIntersections(float dir[3], std::unique_ptr<Mesh>& innerMesh)
 {
@@ -128,4 +131,8 @@ Vertex* Mesh::getVertexAtIndex(int index)
 void Mesh::resize()
 {
 	vertices.shrink_to_fit();
+}
+void Mesh::addVertexIndex(const std::string& s, int index)
+{
+	VertexIndices.insert(std::pair<std::string, int>(s, index));
 }

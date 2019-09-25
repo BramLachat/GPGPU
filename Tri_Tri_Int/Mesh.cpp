@@ -34,14 +34,15 @@ void Mesh::addVertex(const Vertex& v)
 }
 int Mesh::findDuplicate(const Vertex& v)
 {
-	for(std::size_t i = 0 ; i < vertices.size() ; i++)
+	std::map<std::string, int>::iterator itr = VertexIndices.find(v.toString());
+	if (itr != VertexIndices.end())
 	{
-		if (v.isDuplicate(vertices.at(i)))
-		{
-			return (int)i;
-		}
+		return itr->second;
 	}
-	return -1;
+	else
+	{
+		return -1;
+	}
 }
 void Mesh::findIntersections(float dir[3], std::unique_ptr<Mesh>& innerMesh)
 {
@@ -113,11 +114,15 @@ void Mesh::schrijf()
 		std::cout << std::endl;
 	}
 }
-/*Vertex Mesh::getVertexByIndex(int index)
+Vertex* Mesh::getVertexAtIndex(int index)
 {
-	return vertices.at(index);
-}*/
+	return &(vertices.at(index));
+}
 void Mesh::resize()
 {
 	vertices.shrink_to_fit();
+}
+void Mesh::addVertexIndex(const std::string& s, int index)
+{
+	VertexIndices.insert(std::pair<std::string, int>(s, index));
 }

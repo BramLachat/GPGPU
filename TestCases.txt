@@ -1,11 +1,11 @@
 RayTriangleIntersection
 Mesh			#Vertices	#Triangles	CPUTime
-Box_Centered		8		12		1ms		(10)
-Sphericon		122		240		39ms		(100)
-BB_Bal			3007		6014		9219ms		(1000)
-Hull_Grav		27194		54492				(10000)
+Box_Centered		8		12		0ms		(10)
+Sphericon		122		240		0ms		(100)
+BB_Bal			3007		6014		461ms		(1000)
+Hull_Grav		27194		54492		32220ms		(10000)
 Pokemon			207964		416002				(100000)
-Helmet			1921966		3888600				(1000000)
+(Helmet			1921966		3888600				(1000000))
 
 TriangleTriangleIntersection
 Mesh			#Vertices	#Triangles	CPUTime
@@ -14,4 +14,20 @@ Sphericon		122		240				(100)
 BB_Bal			3006		6012				(1000)
 Hull_Grav		27194		54492				(10000)
 Pokemon			207964		416002				(100000)
-Helmet			1921966		3888600				(1000000)
+(Helmet			1921966		3888600				(1000000))
+
+Box_Centered_Small_Bin.stl
+Box_Centered_Big_Bin.stl
+
+Sphericon_SmallBin.stl
+SphericonBin.stl
+
+BB_Ball_CenteredBin.stl
+BB_Ball_Centered_BigBin.stl
+
+Hull_GravBin.stl
+Hull_Grav_BigBin.stl
+
+PokemonBin.stl
+Pokemon_BigBin.stl
+
