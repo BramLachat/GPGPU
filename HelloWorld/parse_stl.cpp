@@ -63,8 +63,8 @@ namespace stl {
 			for (int i = 0; i < 3; i++)
 			{
 				v = parse_point(stl_file);
-				duplicateVertexIndex = mesh->findDuplicate(v);
-				mesh->addVertexIndex(v.toString(), mesh->getNumberOfVertices());
+				duplicateVertexIndex = mesh->findDuplicate(v);//to string methode niet 2 keer oproepen
+				mesh->addVertexIndex(v.toString(), mesh->getNumberOfVertices());//index niet 2 keer oproepen
 				if (duplicateVertexIndex == -1)
 				{
 					mesh->addVertex(v);
@@ -84,6 +84,7 @@ namespace stl {
 		mesh->resize();
 		std::cout << "copies" << Vertex::copies << std::endl;
 		Vertex::copies = 0;
+		//mesh->schrijf();
 		return mesh;
 	}
 

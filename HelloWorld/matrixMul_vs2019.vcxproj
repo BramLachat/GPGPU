@@ -106,9 +106,11 @@
     <ClCompile Include="parse_stl.cpp" />
     <ClCompile Include="RayTriangleIntersect.cpp" />
     <ClCompile Include="Triangle.cpp" />
+    <ClCompile Include="TriangleTriangleIntersect.cpp" />
     <ClCompile Include="Vertex.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="TriangleTriangleIntersect.h" />
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="RayTriangleIntersect.h" />
     <ClInclude Include="parse_stl.h" />
