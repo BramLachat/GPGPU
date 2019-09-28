@@ -213,6 +213,17 @@ namespace Intersection {
 		//std::cout << "vert1 = " << vert1[0] << ", " << vert1[1] << ", " << vert1[2] << std::endl;
 		//std::cout << "vert2 = " << vert2[0] << ", " << vert2[1] << ", " << vert2[2] << std::endl;
 		//std::cout << "orig = " << orig[0] << ", " << orig[1] << ", " << orig[2] << std::endl;
+
+		//Transfer parameters to device memory (boek: programming massively parallel processors fig 3.10 p50)
+			//cudaMalloc(pointerToPointer, size);
+			//cudaMemcpy(pointerToPointer, pointer, size, cudaMemcpyHostToDevice);
+
+		//Kernel invocation code
+
+		//Transfer variables from device back to host
+			//cudaMemcpy(..., ..., size, cudaMemcpyDeviceToHost);
+			//cudaFree(pointer);
+
 		float edge1[3], edge2[3], tvec[3], pvec[3], qvec[3];
 		float det, inv_det;
 

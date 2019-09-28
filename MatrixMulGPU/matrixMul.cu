@@ -1,41 +1,36 @@
-#include <stdio.h>
-#define SIZE	1024
+#include <iostream>
 
-__global__ void VectorAdd(int *a, int *b, int *c, int n)
-{
-	int i = threadIdx.x;
-
-	if (i < n)
-	{
-		c[i] = a[i] + b[i];
-	}
+__global__ void add(int* a, int* b, int* c) {
+	c[blockIdx.x] = a[blockIdx.x] + b[blockIdx.x];
 }
 
-int main()
-{
-	int *a, *b, *c;
+int main(void) {
+	int a, b, c; // host copies of a, b, c
+	int* d_a, * d_b, * d_c; // device copies of a, b, c
+	int size = sizeof(int);
 
-	cudaMallocManaged(&a, SIZE * sizeof(int));
-	cudaMallocManaged(&b, SIZE * sizeof(int));
-	cudaMallocManaged(&c, SIZE * sizeof(int));
+	// Allocate space for device copies of a, b, c
+	cudaMalloc((void**)& d_a, size);
+	cudaMalloc((void**)& d_b, size);
+	cudaMalloc((void**)& d_c, size);
 
-	for (int i = 0; i < SIZE; ++i)
-	{
-		a[i] = i;
-		b[i] = i;
-		c[i] = 0;
-	}
+	// Setup input values
+	a = 2;
+	b = 7;
 
-	VectorAdd <<<1, SIZE>>> (a, b, c, SIZE);
+	// Copy inputs to device
+	cudaMemcpy(d_a, &a, size, cudaMemcpyHostToDevice);
+	cudaMemcpy(d_b, &b, size, cudaMemcpyHostToDevice);
 
-	cudaDeviceSynchronize();
+	// Launch add() kernel on GPU
+	add<<<1,1>>>(d_a, d_b, d_c);
 
-	//for (int i = 0; i < 10; ++i)
-	printf("c[%d] = %d\n", SIZE - 1, c[SIZE - 1]);
+	// Copy result back to host
+	cudaMemcpy(&c, d_c, size, cudaMemcpyDeviceToHost);
 
-	cudaFree(a);
-	cudaFree(b);
-	cudaFree(c);
+	std::cout << c << std::endl;
 
-	return 0;
+	// Cleanup
+	cudaFree(d_a); cudaFree(d_b); cudaFree(d_c);
+	return 0;
 }
