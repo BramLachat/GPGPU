@@ -1,7 +1,7 @@
 #include <memory>
 #include <iostream>
 
-#include "Vertex.h"
+#include "Vertex.cuh"
 #include <string>
 
 int Vertex::copies = 0;
@@ -62,7 +62,7 @@ bool Vertex::isDuplicate(const Vertex& v) const
 		return false;
 	}
 }
-float* Vertex::getCoordinates()
+__device__ __host__ float* Vertex::getCoordinates()
 {
 	return point;
 }

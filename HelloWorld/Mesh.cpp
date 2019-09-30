@@ -6,7 +6,7 @@
 #include <fstream>
 
 #include "Mesh.h"
-#include "RayTriangleIntersect.h"
+#include "RayTriangleIntersect.cuh"
 #include "TriangleTriangleIntersect.h"
 
 
@@ -234,4 +234,12 @@ void Mesh::writeTrianglesToFile(std::unique_ptr<Mesh>& innerMesh)
 		ofs << "  endfacet" << std::endl;
 	}
 	ofs << "endsolid vcg" << std::endl;
+}
+std::vector<Vertex> Mesh::getVertices()
+{
+	return vertices;
+}
+std::vector<Triangle> Mesh::getTriangles()
+{
+	return triangles;
 }

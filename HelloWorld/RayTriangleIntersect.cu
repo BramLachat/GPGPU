@@ -6,8 +6,9 @@
 
 #include <math.h>
 #include <iostream>
+#include <device_launch_parameters.h>
 
-#include "RayTriangleIntersect.h"
+#include "RayTriangleIntersect.cuh"
 
 #define EPSILON 0.000001
 #define CROSS(dest,v1,v2) \
@@ -280,6 +281,73 @@ namespace Intersection {
 		else
 		{
 			return 0;
+		}
+	}
+
+	__global__ void intersect_triangle4(float orig[3], float dir[3],
+		Triangle* triangles, Vertex* vertices, int* verticesSize, int* trianglesSize, int* result)
+	{
+		float* vert0 = vertices[(triangles[threadIdx.x].getIndexOfVertexInMesh(0))].getCoordinates();
+		float* vert1 = vertices[(triangles[threadIdx.x].getIndexOfVertexInMesh(1))].getCoordinates();
+		float* vert2 = vertices[(triangles[threadIdx.x].getIndexOfVertexInMesh(2))].getCoordinates();
+
+		float edge1[3], edge2[3], tvec[3], pvec[3], qvec[3];
+		float det, inv_det;
+		float t, u, v;
+
+		/* find vectors for two edges sharing vert0 */
+		SUB(edge1, vert1, vert0);
+		SUB(edge2, vert2, vert0);
+
+		/* begin calculating determinant - also used to calculate U parameter */
+		CROSS(pvec, dir, edge2);
+
+		/* if determinant is near zero, ray lies in plane of triangle */
+		det = DOT(edge1, pvec);
+
+		/* calculate distance from vert0 to ray origin */
+		SUB(tvec, orig, vert0);
+		inv_det = 1.0 / det;
+
+		CROSS(qvec, tvec, edge1);
+
+		if (det > EPSILON)
+		{
+			u = DOT(tvec, pvec);
+			if (u < 0.0 || u > det)
+				result[threadIdx.x] = 0;
+
+			/* calculate V parameter and test bounds */
+			v = DOT(dir, qvec);
+			if (v < 0.0 || u + v > det)
+				result[threadIdx.x] = 0;
+
+		}
+		else if (det < -EPSILON)
+		{
+			/* calculate U parameter and test bounds */
+			u = DOT(tvec, pvec);
+			if (u > 0.0 || u < det)
+				result[threadIdx.x] = 0;
+
+			/* calculate V parameter and test bounds */
+			v = DOT(dir, qvec);
+			if (v > 0.0 || u + v < det)
+				result[threadIdx.x] = 0;
+		}
+		else result[threadIdx.x] = 0;  /* ray is parallell to the plane of the triangle */
+
+		t = DOT(edge2, qvec) * inv_det;
+		(u) *= inv_det;
+		(v) *= inv_det;
+
+		if (t > 0)
+		{
+			result[threadIdx.x] = 1;
+		}
+		else
+		{
+			result[threadIdx.x] = 0;
 		}
 	}
 

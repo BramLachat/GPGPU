@@ -3,17 +3,17 @@
 
 #include <vector>
 
-#include "Vertex.h"
+#include "Vertex.cuh"
 
 class Triangle
 {
 private:
-	std::vector<int> vertexIndexes;
+	int vertexIndexes[3];
 public:
 	Triangle();
 	Triangle(const Triangle& t);
-	void addVertexIndex(const int& index);
-	int getIndexOfVertexInMesh(const int& index);
+	void addVertexIndex(int index, int vertexNumber);
+	__device__ __host__ int getIndexOfVertexInMesh(int index);
 	void clear();
 };
 #endif

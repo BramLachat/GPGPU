@@ -7,8 +7,8 @@
 
 #include "parse_stl.h"
 #include "Mesh.h"
-#include "Triangle.h"
-#include "Vertex.h"
+#include "Triangle.cuh"
+#include "Vertex.cuh"
 
 namespace stl {
 
@@ -68,11 +68,11 @@ namespace stl {
 				if (duplicateVertexIndex == -1)
 				{
 					mesh->addVertex(v);
-					t.addVertexIndex(mesh->getLastVertex());
+					t.addVertexIndex(mesh->getLastVertex(), i);
 				}
 				else
 				{
-					t.addVertexIndex(duplicateVertexIndex);
+					t.addVertexIndex(duplicateVertexIndex, i);
 				}
 			}
 			mesh->addTriangle(t);

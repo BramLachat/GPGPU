@@ -73,6 +73,7 @@
     <ClCompile>
       <Optimization>Disabled</Optimization>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <SuppressStartupBanner Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">false</SuppressStartupBanner>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -81,6 +82,7 @@
     <CudaCompile>
       <Runtime>MTd</Runtime>
       <TargetMachinePlatform>64</TargetMachinePlatform>
+      <GenerateRelocatableDeviceCode Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</GenerateRelocatableDeviceCode>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
@@ -95,27 +97,27 @@
     <CudaCompile>
       <Runtime>MT</Runtime>
       <TargetMachinePlatform>64</TargetMachinePlatform>
+      <GenerateRelocatableDeviceCode Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</GenerateRelocatableDeviceCode>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <CudaCompile Include="matrixMul.cu" />
+    <CudaCompile Include="Main.cu" />
+    <CudaCompile Include="RayTriangleIntersect.cu" />
+    <CudaCompile Include="RayTriangleIntersect.cuh" />
+    <CudaCompile Include="Triangle.cuh" />
+    <CudaCompile Include="Triangle.cu" />
+    <CudaCompile Include="Vertex.cuh" />
+    <CudaCompile Include="Vertex.cu" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Main.cpp" />
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="parse_stl.cpp" />
-    <ClCompile Include="RayTriangleIntersect.cpp" />
-    <ClCompile Include="Triangle.cpp" />
     <ClCompile Include="TriangleTriangleIntersect.cpp" />
-    <ClCompile Include="Vertex.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="TriangleTriangleIntersect.h" />
     <ClInclude Include="Mesh.h" />
-    <ClInclude Include="RayTriangleIntersect.h" />
     <ClInclude Include="parse_stl.h" />
-    <ClInclude Include="Triangle.h" />
-    <ClInclude Include="Vertex.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
