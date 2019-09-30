@@ -3,8 +3,6 @@
 
 #include <cuda_runtime.h>
 
-#include "Triangle.cuh"
-
 namespace Intersection {
 
 	int intersect_triangle(float orig[3], float dir[3],
@@ -24,7 +22,7 @@ namespace Intersection {
 		float* t, float* u, float* v);
 
 	__global__ void intersect_triangle4(float orig[3], float dir[3],
-		Triangle* triangles, Vertex* vertices, int* verticesSize, int* trianglesSize, int* result);
+		int* triangles, float* vertices, int* result);
 
 }
 

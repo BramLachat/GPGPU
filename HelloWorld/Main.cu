@@ -59,7 +59,8 @@ int main(int argc, char* argv[]) {
 	float yCenter = (V1->getCoordinates()[1] + V2->getCoordinates()[1] + V3->getCoordinates()[1])/3;
 	float zCenter = (V1->getCoordinates()[2] + V2->getCoordinates()[2] + V3->getCoordinates()[2])/3;
 
-	float direction[3] = { xCenter, yCenter, zCenter };
+	//float direction[3] = { xCenter, yCenter, zCenter };
+	float direction[3] = { 1.0, 1.0, 1.0 };
 
 	std::cout << "direction = " << direction[0] << ", " << direction[1] << ", " << direction[2] << std::endl;
 
@@ -89,95 +90,51 @@ int main(int argc, char* argv[]) {
 
 void rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::unique_ptr<Mesh>& outerMesh)
 {
-	/*float* t = new float;
-	float* u = new float;
-	float* v = new float;
-	Vertex* V1;
-	Vertex* V2;
-	Vertex* V3;
-	float* vert1;
-	float* vert2;
-	float* vert3;*/
 	float* orig;
 	float* cudaOrig;
-	float* cudaDir;
-	int verticesSize;
-	int trianglesSize;
-	int* cudaVerticesSize;
-	int* cudaTrianglesSize;
-
-
-	Vertex* innerVertex;
-	Vertex* outerVerticesCuda;
-	Triangle* outerTrianglesCuda;
-
-	std::vector<Vertex> innerVertices = innerMesh->getVertices();
-	std::vector<Triangle> outertriangles = outerMesh->getTriangles();
-	std::vector<Vertex> outerVertices = outerMesh->getVertices();
-
-	verticesSize = outerVertices.size();
-	trianglesSize = outertriangles.size();
 	
-	outerVerticesCuda = &outerVertices[0];
-	cudaMalloc((void**)& outerVerticesCuda, outerVertices.size()*sizeof(Vertex));
-	cudaMemcpy(outerVerticesCuda, &outerVertices, outerVertices.size() * sizeof(Vertex), cudaMemcpyHostToDevice);
-
-	outerTrianglesCuda = &outertriangles[0];
-	cudaMalloc((void**)& outerTrianglesCuda, outertriangles.size()*sizeof(Triangle));
-	cudaMemcpy(outerTrianglesCuda, &outertriangles, outertriangles.size() * sizeof(Triangle), cudaMemcpyHostToDevice);
-
+	float* cudaDir;
 	cudaMalloc((void**)& cudaDir, 3*sizeof(float));
 	cudaMemcpy(cudaDir, dir, 3*sizeof(float), cudaMemcpyHostToDevice);
 
-	cudaMalloc((void**)& cudaTrianglesSize, sizeof(int));
-	cudaMemcpy(cudaTrianglesSize, &trianglesSize, sizeof(int), cudaMemcpyHostToDevice);
-
-	cudaMalloc((void**)& cudaVerticesSize, sizeof(int));
-	cudaMemcpy(cudaVerticesSize, &verticesSize, sizeof(int), cudaMemcpyHostToDevice);
-
 	bool inside = true;
+	int numberOfTriangles = outerMesh->getNumberOfTriangles();
 
 	for (int j = 0; j < innerMesh->getNumberOfVertices(); j++)
 	{
-		innerVertex = &(innerVertices.at(j));
-		orig = innerVertex->getCoordinates();
+		orig = (innerMesh->getVertexAtIndex(j))->getCoordinates();
+		cudaMalloc((void**)& cudaOrig, 3 * sizeof(float));
+		cudaMemcpy(cudaOrig, orig, 3 * sizeof(float), cudaMemcpyHostToDevice);
 
-		int* result = new int[trianglesSize];
+		int* result = new int[numberOfTriangles];
 		int* cudaResult;
+		cudaMalloc((void**)& cudaResult, numberOfTriangles * sizeof(int));
 
-		cudaMalloc((void**)& cudaOrig, 3*sizeof(float));
-		cudaMemcpy(cudaOrig, orig, 3*sizeof(float), cudaMemcpyHostToDevice);
+		int* triangles = outerMesh->getIntArrayTriangles();
+		int* cudaTriangles;
+		int sizeTriangles = 3 * numberOfTriangles * sizeof(int);
+		cudaMalloc((void**)& cudaTriangles, sizeTriangles);
+		cudaMemcpy(cudaTriangles, triangles, sizeTriangles, cudaMemcpyHostToDevice);
 
-		cudaMalloc((void**)& cudaResult, trianglesSize*sizeof(int));
-
+		float* vertices = outerMesh->getFloatArrayVertices();
+		float* cudaVertices;
+		int sizeVertices = 3 * outerMesh->getNumberOfVertices() * sizeof(float);
+		cudaMalloc((void**)& cudaVertices, sizeVertices);
+		cudaMemcpy(cudaVertices, vertices, sizeVertices, cudaMemcpyHostToDevice);
 
 		int numberOfIntersections = 0;
 
-		Intersection::intersect_triangle4<<<1,trianglesSize>>>(cudaOrig, cudaDir, outerTrianglesCuda, outerVerticesCuda, cudaVerticesSize, cudaTrianglesSize, cudaResult);
+		Intersection::intersect_triangle4<<<1,numberOfTriangles>>>(cudaOrig, cudaDir, cudaTriangles, cudaVertices, cudaResult);
 
-		cudaMemcpy(result, cudaResult, trianglesSize * sizeof(int), cudaMemcpyDeviceToHost);
+		cudaMemcpy(result, cudaResult, numberOfTriangles * sizeof(int), cudaMemcpyDeviceToHost);
 
 		std::cout << "result = ";
-		for (int i = 0; i < trianglesSize; i++)
+		for (int i = 0; i < numberOfTriangles; i++)
 		{
 			std::cout << result[i] << ", ";
 		}
 		std::cout << std::endl;
 
-		/*for (int i = 0; i < triangles.size(); i++)
-		{
-			V1 = &(vertices.at(triangles.at(i).getIndexOfVertexInMesh(0)));
-			V2 = &(vertices.at(triangles.at(i).getIndexOfVertexInMesh(1)));
-			V3 = &(vertices.at(triangles.at(i).getIndexOfVertexInMesh(2)));
-			vert1 = V1->getCoordinates();
-			vert2 = V2->getCoordinates();
-			vert3 = V3->getCoordinates();
-			if (Intersection::intersect_triangle3(orig, dir, vert1, vert2, vert3, t, u, v) == 1)
-			{
-				numberOfIntersections++;
-			}
-		}*/
-		//std::cout << "aantal intersecties = " << numberOfIntersections << std::endl;
 		if (numberOfIntersections % 2 == 0)
 		{
 			inside = false;
@@ -186,12 +143,7 @@ void rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::u
 		cudaFree(cudaResult);
 		delete result;
 	}
-	cudaFree(outerVerticesCuda);
-	cudaFree(outerTrianglesCuda);
 	cudaFree(cudaDir);
-	cudaFree(cudaTrianglesSize);
-	cudaFree(cudaVerticesSize);
-	//delete t; delete u; delete v;
 	if (inside) { std::cout << "INSIDE" << std::endl; }
 	else { std::cout << "OUTSIDE" << std::endl; }
 }

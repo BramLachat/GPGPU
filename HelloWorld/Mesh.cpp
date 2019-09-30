@@ -72,6 +72,7 @@ void Mesh::rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh)
 	float* vert2;
 	float* vert3;
 	float* orig;
+	float dirPerPoint[3];
 
 	Vertex* innerVertex;
 
@@ -83,6 +84,9 @@ void Mesh::rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh)
 	{
 		innerVertex = &(innerMesh->vertices.at(j));
 		orig = innerVertex->getCoordinates();
+		dirPerPoint[0] = dir[0] - orig[0];
+		dirPerPoint[1] = dir[1] - orig[1];
+		dirPerPoint[2] = dir[2] - orig[2];
 		//std::cout << "orig = " << orig[0] << ", " << orig[1] << ", " << orig[2] << std::endl;
 
 		int numberOfIntersections = 0;
@@ -95,12 +99,16 @@ void Mesh::rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh)
 			vert1 = V1->getCoordinates();
 			vert2 = V2->getCoordinates();
 			vert3 = V3->getCoordinates();
-			if (Intersection::intersect_triangle3(orig, dir, vert1, vert2, vert3, t, u, v) == 1)
+			if (Intersection::intersect_triangle3(orig, dirPerPoint, vert1, vert2, vert3, t, u, v) == 1)
 			{
 				numberOfIntersections++;
+				std::cout << "1, ";
+			}
+			else {
+				std::cout << "0, ";
 			}
 		}
-		//std::cout << "aantal intersecties = " << numberOfIntersections << std::endl;
+		std::cout << "aantal intersecties = " << numberOfIntersections << std::endl;
 		if (numberOfIntersections % 2 == 0)
 		{
 			inside = false;
@@ -235,11 +243,25 @@ void Mesh::writeTrianglesToFile(std::unique_ptr<Mesh>& innerMesh)
 	}
 	ofs << "endsolid vcg" << std::endl;
 }
-std::vector<Vertex> Mesh::getVertices()
+int* Mesh::getIntArrayTriangles()
 {
-	return vertices;
+	int* triangleArray = new int[triangles.size() * 3];
+	for (int i = 0 ; i < triangles.size() ; i++)
+	{
+		triangleArray[i] = triangles[i].getIndicesOfVerticesInMesh()[0];
+		triangleArray[i+1] = triangles[i].getIndicesOfVerticesInMesh()[1];
+		triangleArray[i+2] = triangles[i].getIndicesOfVerticesInMesh()[2];
+	}
+	return triangleArray;
 }
-std::vector<Triangle> Mesh::getTriangles()
+float* Mesh::getFloatArrayVertices()
 {
-	return triangles;
+	float* vertexArray = new float[vertices.size() * 3];
+	for (int i = 0; i < vertices.size(); i++)
+	{
+		vertexArray[i] = vertices[i].getCoordinates()[0];
+		vertexArray[i + 1] = vertices[i].getCoordinates()[1];
+		vertexArray[i + 2] = vertices[i].getCoordinates()[2];
+	}
+	return vertexArray;
 }

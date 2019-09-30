@@ -285,11 +285,13 @@ namespace Intersection {
 	}
 
 	__global__ void intersect_triangle4(float orig[3], float dir[3],
-		Triangle* triangles, Vertex* vertices, int* verticesSize, int* trianglesSize, int* result)
+		int* triangles, float* vertices, int* result)
 	{
-		float* vert0 = vertices[(triangles[threadIdx.x].getIndexOfVertexInMesh(0))].getCoordinates();
-		float* vert1 = vertices[(triangles[threadIdx.x].getIndexOfVertexInMesh(1))].getCoordinates();
-		float* vert2 = vertices[(triangles[threadIdx.x].getIndexOfVertexInMesh(2))].getCoordinates();
+		printf("orig = %f, %f, %f", orig[0], orig[1], orig[2]);
+		printf("dir = %f, %f, %f", dir[0], dir[1], dir[2]);
+		float vert0[3] = { vertices[triangles[threadIdx.x]], vertices[triangles[threadIdx.x]+1], vertices[triangles[threadIdx.x]+2] };
+		float vert1[3] = { vertices[triangles[threadIdx.x+1]], vertices[triangles[threadIdx.x+1] + 1], vertices[triangles[threadIdx.x+1] + 2] };
+		float vert2[3] = { vertices[triangles[threadIdx.x+2]], vertices[triangles[threadIdx.x+2] + 1], vertices[triangles[threadIdx.x+2] + 2] };
 
 		float edge1[3], edge2[3], tvec[3], pvec[3], qvec[3];
 		float det, inv_det;
@@ -314,28 +316,40 @@ namespace Intersection {
 		if (det > EPSILON)
 		{
 			u = DOT(tvec, pvec);
-			if (u < 0.0 || u > det)
+			if (u < 0.0 || u > det) {
 				result[threadIdx.x] = 0;
+				return;
+			}
 
 			/* calculate V parameter and test bounds */
 			v = DOT(dir, qvec);
-			if (v < 0.0 || u + v > det)
+			if (v < 0.0 || u + v > det) {
 				result[threadIdx.x] = 0;
+				return;
+			}
 
 		}
 		else if (det < -EPSILON)
 		{
 			/* calculate U parameter and test bounds */
 			u = DOT(tvec, pvec);
-			if (u > 0.0 || u < det)
+			if (u > 0.0 || u < det) {
 				result[threadIdx.x] = 0;
+				return;
+			}
 
 			/* calculate V parameter and test bounds */
 			v = DOT(dir, qvec);
-			if (v > 0.0 || u + v < det)
+			if (v > 0.0 || u + v < det) {
 				result[threadIdx.x] = 0;
+				return;
+			}
 		}
-		else result[threadIdx.x] = 0;  /* ray is parallell to the plane of the triangle */
+		else 
+		{
+			result[threadIdx.x] = 0;  /* ray is parallell to the plane of the triangle */
+			return;
+		}
 
 		t = DOT(edge2, qvec) * inv_det;
 		(u) *= inv_det;
@@ -344,10 +358,12 @@ namespace Intersection {
 		if (t > 0)
 		{
 			result[threadIdx.x] = 1;
+			return;
 		}
 		else
 		{
 			result[threadIdx.x] = 0;
+			return;
 		}
 	}
 

@@ -4,8 +4,8 @@
 #include <string>
 #include <map>
 
-#include "Vertex.cuh"
-#include "Triangle.cuh"
+#include "Vertex.h"
+#include "Triangle.h"
 
 class Mesh
 {
@@ -31,7 +31,7 @@ public:
 	void resize();
 	void addVertexIndex(const std::string& s, int index);
 	void writeTrianglesToFile(std::unique_ptr<Mesh>& innerMesh);
-	std::vector<Vertex> getVertices();
-	std::vector<Triangle> getTriangles();
+	int* getIntArrayTriangles();
+	float* Mesh::getFloatArrayVertices();
 };
 #endif // !MESH_H

@@ -3,7 +3,7 @@
 
 #include <vector>
 
-#include "Vertex.cuh"
+#include "Vertex.h"
 
 class Triangle
 {
@@ -13,7 +13,8 @@ public:
 	Triangle();
 	Triangle(const Triangle& t);
 	void addVertexIndex(int index, int vertexNumber);
-	__device__ __host__ int getIndexOfVertexInMesh(int index);
+	int getIndexOfVertexInMesh(int index);
+	int* Triangle::getIndicesOfVerticesInMesh();
 	void clear();
 };
 #endif

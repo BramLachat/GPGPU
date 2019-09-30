@@ -2,7 +2,6 @@
 #define VERTEX_H
 
 #include <string>
-#include <cuda_runtime.h>
 
 class Vertex
 {
@@ -16,7 +15,7 @@ public:
 	Vertex& operator=(const Vertex& v);
 	bool operator==(const Vertex& v);
 	bool isDuplicate(const Vertex& v) const;
-	__device__ __host__ float* getCoordinates();
+	float* getCoordinates();
 	void schrijf();
 	std::string toString() const;
 	//~Vertex();

@@ -1,6 +1,6 @@
 #include <vector>
 
-#include "Triangle.cuh"
+#include "Triangle.h"
 
 Triangle::Triangle()
 {
@@ -16,9 +16,13 @@ void Triangle::addVertexIndex(int index, int vertexNumber)
 {
 	vertexIndexes[vertexNumber] = index;
 }
-__device__ __host__ int Triangle::getIndexOfVertexInMesh(int index)
+int Triangle::getIndexOfVertexInMesh(int index)
 {
 	return vertexIndexes[index];
+}
+int* Triangle::getIndicesOfVerticesInMesh()
+{
+	return vertexIndexes;
 }
 void Triangle::clear()
 {

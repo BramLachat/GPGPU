@@ -7,8 +7,8 @@
 
 #include "parse_stl.h"
 #include "Mesh.h"
-#include "Triangle.cuh"
-#include "Vertex.cuh"
+#include "Triangle.h"
+#include "Vertex.h"
 
 namespace stl {
 
