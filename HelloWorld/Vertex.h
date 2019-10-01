@@ -16,6 +16,7 @@ public:
 	bool operator==(const Vertex& v);
 	bool isDuplicate(const Vertex& v) const;
 	float* getCoordinates();
+	float getCoordinate(int i);
 	void schrijf();
 	std::string toString() const;
 	//~Vertex();

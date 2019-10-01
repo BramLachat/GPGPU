@@ -9,6 +9,7 @@
 #include "RayTriangleIntersect.cuh"
 
 void rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::unique_ptr<Mesh>& outerMesh);
+void handleCudaError(cudaError_t cudaERR);
 
 int main(int argc, char* argv[]) {
 	std::string stl_file_inside;
@@ -59,28 +60,41 @@ int main(int argc, char* argv[]) {
 	float yCenter = (V1->getCoordinates()[1] + V2->getCoordinates()[1] + V3->getCoordinates()[1])/3;
 	float zCenter = (V1->getCoordinates()[2] + V2->getCoordinates()[2] + V3->getCoordinates()[2])/3;
 
-	//float direction[3] = { xCenter, yCenter, zCenter };
-	float direction[3] = { 1.0, 1.0, 1.0 };
+	float direction[3] = { xCenter, yCenter, zCenter };
+	//float direction[3] = { 1.0, 1.0, 1.0 };
 
 	std::cout << "direction = " << direction[0] << ", " << direction[1] << ", " << direction[2] << std::endl;
 
-	auto start = std::chrono::high_resolution_clock::now(); //start time measurement
+	//auto start = std::chrono::high_resolution_clock::now(); //start time measurement
 
 	if (RayTriangle == 0)
 	{
+		auto start = std::chrono::high_resolution_clock::now(); //start time measurement
+
 		//2 opties om unique ptr mee te geven als argument aan een functie:
 		//https://stackoverflow.com/questions/30905487/how-can-i-pass-stdunique-ptr-into-a-function
-		//triangleMesh_Outside->rayTriangleIntersect(direction, triangleMesh_Inside);
+		triangleMesh_Outside->rayTriangleIntersect(direction, triangleMesh_Inside);
+
+		auto end = std::chrono::high_resolution_clock::now(); //stop time measurement
+		auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+		std::cout << "Time = " << duration << "ms" << std::endl;
+
+		start = std::chrono::high_resolution_clock::now(); //start time measurement
+
 		rayTriangleIntersect(direction, triangleMesh_Inside, triangleMesh_Outside);
+
+		end = std::chrono::high_resolution_clock::now(); //stop time measurement
+		duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+		std::cout << "Time = " << duration << "ms" << std::endl;
 	}
 	else
 	{
 		triangleMesh_Outside->triangleTriangleIntersect(triangleMesh_Inside);
 	}	
 	
-	auto end = std::chrono::high_resolution_clock::now(); //stop time measurement
-	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-	std::cout << "Time = " << duration << "ms" << std::endl;
+	//auto end = std::chrono::high_resolution_clock::now(); //stop time measurement
+	//auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+	//std::cout << "Time = " << duration << "ms" << std::endl;
 
 	std::cout << "Press Enter to quit program!" << std::endl;
 	std::cin.get();
@@ -90,60 +104,83 @@ int main(int argc, char* argv[]) {
 
 void rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::unique_ptr<Mesh>& outerMesh)
 {
+	bool inside = true;
+	int numberOfTriangles = outerMesh->getNumberOfTriangles();
+
+	//nodig om in kernel te controleren dat aantal keer dat test wordt uitgevoerd <= is dan het aantal driehoeken
+	int* numberOfCalculations;
+	handleCudaError(cudaMalloc((void**)& numberOfCalculations, sizeof(int)));
+	handleCudaError(cudaMemcpy(numberOfCalculations, &numberOfTriangles, sizeof(int), cudaMemcpyHostToDevice));
+
 	float* orig;
 	float* cudaOrig;
 	
 	float* cudaDir;
-	cudaMalloc((void**)& cudaDir, 3*sizeof(float));
-	cudaMemcpy(cudaDir, dir, 3*sizeof(float), cudaMemcpyHostToDevice);
+	handleCudaError(cudaMalloc((void**)& cudaDir, 3*sizeof(float)));
+	handleCudaError(cudaMemcpy(cudaDir, dir, 3*sizeof(float), cudaMemcpyHostToDevice));
 
-	bool inside = true;
-	int numberOfTriangles = outerMesh->getNumberOfTriangles();
+	int* result = new int[numberOfTriangles];
+	int* cudaResult;
+	handleCudaError(cudaMalloc((void**)& cudaResult, numberOfTriangles * sizeof(int))); //dit hoeft geen lijst van int's te zijn boolean is voldoende
+
+	int* triangles = outerMesh->getIntArrayTriangles();
+	int* cudaTriangles;
+	int sizeTriangles = 3 * numberOfTriangles * sizeof(int);
+	handleCudaError(cudaMalloc((void**)& cudaTriangles, sizeTriangles));
+	handleCudaError(cudaMemcpy(cudaTriangles, triangles, sizeTriangles, cudaMemcpyHostToDevice));
+
+	float* vertices = outerMesh->getFloatArrayVertices();
+	float* cudaVertices;
+	int sizeVertices = 3 * outerMesh->getNumberOfVertices() * sizeof(float);
+	handleCudaError(cudaMalloc((void**)& cudaVertices, sizeVertices));
+	handleCudaError(cudaMemcpy(cudaVertices, vertices, sizeVertices, cudaMemcpyHostToDevice));
+
+	int totalIntersections = 0;
 
 	for (int j = 0; j < innerMesh->getNumberOfVertices(); j++)
 	{
 		orig = (innerMesh->getVertexAtIndex(j))->getCoordinates();
-		cudaMalloc((void**)& cudaOrig, 3 * sizeof(float));
-		cudaMemcpy(cudaOrig, orig, 3 * sizeof(float), cudaMemcpyHostToDevice);
-
-		int* result = new int[numberOfTriangles];
-		int* cudaResult;
-		cudaMalloc((void**)& cudaResult, numberOfTriangles * sizeof(int));
-
-		int* triangles = outerMesh->getIntArrayTriangles();
-		int* cudaTriangles;
-		int sizeTriangles = 3 * numberOfTriangles * sizeof(int);
-		cudaMalloc((void**)& cudaTriangles, sizeTriangles);
-		cudaMemcpy(cudaTriangles, triangles, sizeTriangles, cudaMemcpyHostToDevice);
-
-		float* vertices = outerMesh->getFloatArrayVertices();
-		float* cudaVertices;
-		int sizeVertices = 3 * outerMesh->getNumberOfVertices() * sizeof(float);
-		cudaMalloc((void**)& cudaVertices, sizeVertices);
-		cudaMemcpy(cudaVertices, vertices, sizeVertices, cudaMemcpyHostToDevice);
+		handleCudaError(cudaMalloc((void**)& cudaOrig, 3 * sizeof(float)));
+		handleCudaError(cudaMemcpy(cudaOrig, orig, 3 * sizeof(float), cudaMemcpyHostToDevice));
 
 		int numberOfIntersections = 0;
 
-		Intersection::intersect_triangle4<<<1,numberOfTriangles>>>(cudaOrig, cudaDir, cudaTriangles, cudaVertices, cudaResult);
+		int numberOfBlocks = ((int)((numberOfTriangles+255)/256));
 
-		cudaMemcpy(result, cudaResult, numberOfTriangles * sizeof(int), cudaMemcpyDeviceToHost);
+		Intersection::intersect_triangle4<<<numberOfBlocks,256>>>(cudaOrig, cudaDir, cudaTriangles, cudaVertices, cudaResult, numberOfCalculations);
+		cudaError_t err = cudaGetLastError();
+		handleCudaError(err);
 
-		std::cout << "result = ";
+		handleCudaError(cudaMemcpy(result, cudaResult, numberOfTriangles * sizeof(int), cudaMemcpyDeviceToHost));
+
+		//std::cout << "result = ";
 		for (int i = 0; i < numberOfTriangles; i++)
 		{
-			std::cout << result[i] << ", ";
+			if (result[i] == 1) { numberOfIntersections++; }
+			//std::cout << result[i] << ", ";
 		}
-		std::cout << std::endl;
-
+		totalIntersections += numberOfIntersections;
+		//std::cout << "numberOfIntersections: " << numberOfIntersections;
+		//std::cout << std::endl;
 		if (numberOfIntersections % 2 == 0)
 		{
 			inside = false;
 		}
 		cudaFree(cudaOrig);
-		cudaFree(cudaResult);
-		delete result;
 	}
 	cudaFree(cudaDir);
+	cudaFree(cudaResult);
+	cudaFree(cudaTriangles);
+	cudaFree(cudaVertices);
+	cudaFree(numberOfCalculations);
+	delete result;
+	std::cout << "totaal intersecties: " << totalIntersections << std::endl;
 	if (inside) { std::cout << "INSIDE" << std::endl; }
 	else { std::cout << "OUTSIDE" << std::endl; }
+}
+
+void handleCudaError(cudaError_t cudaERR) {
+	if (cudaERR != cudaSuccess) {
+		printf("CUDA ERROR : %s\n", cudaGetErrorString(cudaERR));
+	}
 }

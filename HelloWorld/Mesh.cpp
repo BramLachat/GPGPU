@@ -77,6 +77,7 @@ void Mesh::rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh)
 	Vertex* innerVertex;
 
 	bool inside = true;
+	int totalIntersections = 0;
 
 	std::cout << "start berekening" << std::endl;
 
@@ -102,18 +103,20 @@ void Mesh::rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh)
 			if (Intersection::intersect_triangle3(orig, dirPerPoint, vert1, vert2, vert3, t, u, v) == 1)
 			{
 				numberOfIntersections++;
-				std::cout << "1, ";
+				//std::cout << "1, ";
 			}
 			else {
-				std::cout << "0, ";
+				//std::cout << "0, ";
 			}
 		}
-		std::cout << "aantal intersecties = " << numberOfIntersections << std::endl;
+		totalIntersections += numberOfIntersections;
+		//std::cout << "aantal intersecties = " << numberOfIntersections << std::endl;
 		if (numberOfIntersections % 2 == 0)
 		{
 			inside = false;
 		}
 	}
+	std::cout << "totaal intersecties = " << totalIntersections << std::endl;
 	delete t; delete u; delete v;
 	if (inside) { std::cout << "INSIDE" << std::endl; }
 	else { std::cout << "OUTSIDE" << std::endl; }
@@ -248,9 +251,9 @@ int* Mesh::getIntArrayTriangles()
 	int* triangleArray = new int[triangles.size() * 3];
 	for (int i = 0 ; i < triangles.size() ; i++)
 	{
-		triangleArray[i] = triangles[i].getIndicesOfVerticesInMesh()[0];
-		triangleArray[i+1] = triangles[i].getIndicesOfVerticesInMesh()[1];
-		triangleArray[i+2] = triangles[i].getIndicesOfVerticesInMesh()[2];
+		triangleArray[i*3] = triangles[i].getIndexOfVertexInMesh(0);
+		triangleArray[i*3+1] = triangles[i].getIndexOfVertexInMesh(1);
+		triangleArray[i*3+2] = triangles[i].getIndexOfVertexInMesh(2);
 	}
 	return triangleArray;
 }
@@ -259,9 +262,9 @@ float* Mesh::getFloatArrayVertices()
 	float* vertexArray = new float[vertices.size() * 3];
 	for (int i = 0; i < vertices.size(); i++)
 	{
-		vertexArray[i] = vertices[i].getCoordinates()[0];
-		vertexArray[i + 1] = vertices[i].getCoordinates()[1];
-		vertexArray[i + 2] = vertices[i].getCoordinates()[2];
+		vertexArray[i*3] = vertices[i].getCoordinate(0);
+		vertexArray[i*3 + 1] = vertices[i].getCoordinate(1);
+		vertexArray[i*3 + 2] = vertices[i].getCoordinate(2);
 	}
 	return vertexArray;
 }

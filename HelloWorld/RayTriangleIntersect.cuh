@@ -22,7 +22,7 @@ namespace Intersection {
 		float* t, float* u, float* v);
 
 	__global__ void intersect_triangle4(float orig[3], float dir[3],
-		int* triangles, float* vertices, int* result);
+		int* triangles, float* vertices, int* result, int* numberOfCalculations);
 
 }
 

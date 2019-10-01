@@ -66,6 +66,10 @@ float* Vertex::getCoordinates()
 {
 	return point;
 }
+float Vertex::getCoordinate(int i)
+{
+	return point[i];
+}
 /*Vertex::~Vertex()
 {
 	delete[] point;

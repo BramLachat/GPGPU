@@ -98,6 +98,7 @@
       <Runtime>MT</Runtime>
       <TargetMachinePlatform>64</TargetMachinePlatform>
       <GenerateRelocatableDeviceCode Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</GenerateRelocatableDeviceCode>
+      <PtxAsOptionV Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</PtxAsOptionV>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
@@ -113,8 +114,8 @@
     <CudaCompile Include="Vertex.cpp" />
   </ItemGroup>
   <ItemGroup>
-	<CudaCompile Include="Triangle.h" />
-	<CudaCompile Include="Vertex.h" />
+    <CudaCompile Include="Triangle.h" />
+    <CudaCompile Include="Vertex.h" />
     <ClInclude Include="TriangleTriangleIntersect.h" />
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="parse_stl.h" />

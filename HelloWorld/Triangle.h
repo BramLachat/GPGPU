@@ -14,7 +14,6 @@ public:
 	Triangle(const Triangle& t);
 	void addVertexIndex(int index, int vertexNumber);
 	int getIndexOfVertexInMesh(int index);
-	int* Triangle::getIndicesOfVerticesInMesh();
 	void clear();
 };
 #endif

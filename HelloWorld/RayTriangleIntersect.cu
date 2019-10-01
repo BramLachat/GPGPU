@@ -285,86 +285,113 @@ namespace Intersection {
 	}
 
 	__global__ void intersect_triangle4(float orig[3], float dir[3],
-		int* triangles, float* vertices, int* result)
+		int* triangles, float* vertices, int* result, int* numberOfCalculations) //hier bepaalde waarden nog eens uitprinten voor eenvoudig voorbeeld om te kijken of wel degelijk gebeurt wat je verwacht
 	{
-		printf("orig = %f, %f, %f", orig[0], orig[1], orig[2]);
-		printf("dir = %f, %f, %f", dir[0], dir[1], dir[2]);
-		float vert0[3] = { vertices[triangles[threadIdx.x]], vertices[triangles[threadIdx.x]+1], vertices[triangles[threadIdx.x]+2] };
-		float vert1[3] = { vertices[triangles[threadIdx.x+1]], vertices[triangles[threadIdx.x+1] + 1], vertices[triangles[threadIdx.x+1] + 2] };
-		float vert2[3] = { vertices[triangles[threadIdx.x+2]], vertices[triangles[threadIdx.x+2] + 1], vertices[triangles[threadIdx.x+2] + 2] };
-
-		float edge1[3], edge2[3], tvec[3], pvec[3], qvec[3];
-		float det, inv_det;
-		float t, u, v;
-
-		/* find vectors for two edges sharing vert0 */
-		SUB(edge1, vert1, vert0);
-		SUB(edge2, vert2, vert0);
-
-		/* begin calculating determinant - also used to calculate U parameter */
-		CROSS(pvec, dir, edge2);
-
-		/* if determinant is near zero, ray lies in plane of triangle */
-		det = DOT(edge1, pvec);
-
-		/* calculate distance from vert0 to ray origin */
-		SUB(tvec, orig, vert0);
-		inv_det = 1.0 / det;
-
-		CROSS(qvec, tvec, edge1);
-
-		if (det > EPSILON)
+		int tid = threadIdx.x + blockIdx.x * blockDim.x;
+		/*for (int i = 0; i < 24; i++)
 		{
-			u = DOT(tvec, pvec);
-			if (u < 0.0 || u > det) {
-				result[threadIdx.x] = 0;
+			printf("vertices = %f\n", vertices[i]);
+		}
+		for (int i = 0; i < 36; i++)
+		{
+			printf("triangles = %d\n", triangles[i]);
+		}*/
+		/*if (tid == 0) 
+		{
+			printf("numberOfCalculations: %d", *numberOfCalculations);
+		}*/
+		if (tid < *numberOfCalculations)
+		{
+			float vert0[3] = { vertices[triangles[tid * 3] * 3], vertices[triangles[tid * 3] * 3 + 1], vertices[triangles[tid * 3] * 3 + 2] };
+			float vert1[3] = { vertices[triangles[(tid * 3) + 1] * 3], vertices[triangles[(tid * 3) + 1] * 3 + 1], vertices[triangles[(tid * 3) + 1] * 3 + 2] };
+			float vert2[3] = { vertices[triangles[(tid * 3) + 2] * 3], vertices[triangles[(tid * 3) + 2] * 3 + 1], vertices[triangles[(tid * 3) + 2] * 3 + 2] };
+			//printf("vert0 = %f, %f, %f\n", vert0[0], vert0[1], vert0[2]);
+			//printf("vert1 = %f, %f, %f\n", vert1[0], vert1[1], vert1[2]);
+			//printf("vert2 = %f, %f, %f\n", vert2[0], vert2[1], vert2[2]);
+
+			//float vert0[3] = { 1.0, 0.0, 0.0 };
+			//float vert1[3] = { 0.0, 1.0, 0.0 };
+			//float vert2[3] = { 0.0, 0.0, 1.0 };
+
+			float newDir[3];
+			newDir[0] = dir[0] - orig[0];
+			newDir[1] = dir[1] - orig[1];
+			newDir[2] = dir[2] - orig[2];
+
+			float edge1[3], edge2[3], tvec[3], pvec[3], qvec[3];
+			float det, inv_det;
+			float t, u, v;
+
+			/* find vectors for two edges sharing vert0 */
+			SUB(edge1, vert1, vert0);
+			SUB(edge2, vert2, vert0);
+
+			/* begin calculating determinant - also used to calculate U parameter */
+			CROSS(pvec, newDir, edge2);
+
+			/* if determinant is near zero, ray lies in plane of triangle */
+			det = DOT(edge1, pvec);
+
+			/* calculate distance from vert0 to ray origin */
+			SUB(tvec, orig, vert0);
+			inv_det = 1.0 / det;
+
+			CROSS(qvec, tvec, edge1);
+
+			if (det > EPSILON)
+			{
+				u = DOT(tvec, pvec);
+				if (u < 0.0 || u > det) {
+					result[tid] = 0;
+					return;
+				}
+
+				/* calculate V parameter and test bounds */
+				v = DOT(newDir, qvec);
+				if (v < 0.0 || u + v > det) {
+					result[tid] = 0;
+					return;
+				}
+
+			}
+			else if (det < -EPSILON)
+			{
+				/* calculate U parameter and test bounds */
+				u = DOT(tvec, pvec);
+				if (u > 0.0 || u < det) {
+					result[tid] = 0;
+					return;
+				}
+
+				/* calculate V parameter and test bounds */
+				v = DOT(newDir, qvec);
+				if (v > 0.0 || u + v < det) {
+					result[tid] = 0;
+					return;
+				}
+			}
+			else
+			{
+				result[tid] = 0;  /* ray is parallell to the plane of the triangle */
 				return;
 			}
 
-			/* calculate V parameter and test bounds */
-			v = DOT(dir, qvec);
-			if (v < 0.0 || u + v > det) {
-				result[threadIdx.x] = 0;
+			t = DOT(edge2, qvec) * inv_det;
+			(u) *= inv_det;
+			(v) *= inv_det;
+
+			if (t > 0)
+			{
+				result[tid] = 1;
 				return;
 			}
-
-		}
-		else if (det < -EPSILON)
-		{
-			/* calculate U parameter and test bounds */
-			u = DOT(tvec, pvec);
-			if (u > 0.0 || u < det) {
-				result[threadIdx.x] = 0;
-				return;
-			}
-
-			/* calculate V parameter and test bounds */
-			v = DOT(dir, qvec);
-			if (v > 0.0 || u + v < det) {
-				result[threadIdx.x] = 0;
+			else
+			{
+				result[tid] = 0;
 				return;
 			}
 		}
-		else 
-		{
-			result[threadIdx.x] = 0;  /* ray is parallell to the plane of the triangle */
-			return;
-		}
-
-		t = DOT(edge2, qvec) * inv_det;
-		(u) *= inv_det;
-		(v) *= inv_det;
-
-		if (t > 0)
-		{
-			result[threadIdx.x] = 1;
-			return;
-		}
-		else
-		{
-			result[threadIdx.x] = 0;
-			return;
-		}
+		
 	}
 
 }
