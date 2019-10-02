@@ -72,9 +72,11 @@ void Mesh::rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh)
 	float* vert2;
 	float* vert3;
 	float* orig;
-	float dirPerPoint[3];
+	//float dirPerPoint[3];
 
 	Vertex* innerVertex;
+
+	std::unique_ptr<std::vector<Vertex>> outsideVertices = std::make_unique<std::vector<Vertex>>();
 
 	bool inside = true;
 	int totalIntersections = 0;
@@ -85,9 +87,9 @@ void Mesh::rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh)
 	{
 		innerVertex = &(innerMesh->vertices.at(j));
 		orig = innerVertex->getCoordinates();
-		dirPerPoint[0] = dir[0] - orig[0];
-		dirPerPoint[1] = dir[1] - orig[1];
-		dirPerPoint[2] = dir[2] - orig[2];
+		//dirPerPoint[0] = dir[0] - orig[0];
+		//dirPerPoint[1] = dir[1] - orig[1];
+		//dirPerPoint[2] = dir[2] - orig[2];
 		//std::cout << "orig = " << orig[0] << ", " << orig[1] << ", " << orig[2] << std::endl;
 
 		int numberOfIntersections = 0;
@@ -100,7 +102,8 @@ void Mesh::rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh)
 			vert1 = V1->getCoordinates();
 			vert2 = V2->getCoordinates();
 			vert3 = V3->getCoordinates();
-			if (Intersection::intersect_triangle3(orig, dirPerPoint, vert1, vert2, vert3, t, u, v) == 1)
+			//if (Intersection::intersect_triangle3(orig, dirPerPoint, vert1, vert2, vert3, t, u, v) == 1)
+			if (Intersection::intersect_triangle3(orig, dir, vert1, vert2, vert3, t, u, v) == 1)
 			{
 				numberOfIntersections++;
 				//std::cout << "1, ";
@@ -114,12 +117,14 @@ void Mesh::rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh)
 		if (numberOfIntersections % 2 == 0)
 		{
 			inside = false;
+			outsideVertices->push_back(*innerVertex);
 		}
 	}
 	std::cout << "totaal intersecties = " << totalIntersections << std::endl;
 	delete t; delete u; delete v;
 	if (inside) { std::cout << "INSIDE" << std::endl; }
 	else { std::cout << "OUTSIDE" << std::endl; }
+	writeVerticesToFile(outsideVertices, "OutsideVertices.stl");
 }
 void Mesh::triangleTriangleIntersect(std::unique_ptr<Mesh>& innerMesh)
 {
@@ -132,6 +137,9 @@ void Mesh::triangleTriangleIntersect(std::unique_ptr<Mesh>& innerMesh)
 	Triangle* t1;
 	Triangle* t2;
 	std::vector<Vertex>* innerVertices = &(innerMesh->vertices);
+
+	std::unique_ptr<std::vector<Triangle>> intersectingTriangles1 = std::make_unique<std::vector<Triangle>>();
+	std::unique_ptr<std::vector<Triangle>> intersectingTriangles2 = std::make_unique<std::vector<Triangle>>();
 
 	bool inside = true;
 
@@ -155,8 +163,8 @@ void Mesh::triangleTriangleIntersect(std::unique_ptr<Mesh>& innerMesh)
 			if (Intersection::NoDivTriTriIsect(vert1_1, vert1_2, vert1_3, vert2_1, vert2_2, vert2_3) == 1)
 			{
 				//list printed with intersecting triangles
-				innerMesh->intersectingTriangles.push_back(innerMesh->triangles.at(j));
-				intersectingTriangles.push_back(triangles.at(i));
+				intersectingTriangles1->push_back(innerMesh->triangles.at(j));
+				intersectingTriangles2->push_back(triangles.at(i));
 
 				numberOfIntersections++;
 			}
@@ -169,7 +177,8 @@ void Mesh::triangleTriangleIntersect(std::unique_ptr<Mesh>& innerMesh)
 	}
 	if (inside) { std::cout << "SNIJDEN NIET" << std::endl; }
 	else { std::cout << "SNIJDEN WEL" << std::endl; }
-	writeTrianglesToFile(innerMesh);
+	writeTrianglesToFile(intersectingTriangles1, "IntersectingTriangles1.stl");
+	writeTrianglesToFile(intersectingTriangles2, "IntersectingTriangles2.stl");
 }
 int Mesh::getLastVertex()
 {
@@ -209,12 +218,12 @@ void Mesh::addVertexIndex(const std::string& s, int index)
 {
 	VertexIndices.insert(std::pair<std::string, int>(s, index));
 }
-void Mesh::writeTrianglesToFile(std::unique_ptr<Mesh>& innerMesh)
+void Mesh::writeTrianglesToFile(std::unique_ptr<std::vector<Triangle>>& triangles, std::string fileName)
 {
 	std::vector<Triangle>::iterator itr;
-	std::ofstream ofs("IntersectingTriangles.stl");
+	std::ofstream ofs(fileName);
 	ofs << "solid IntersectingTriangles" << std::endl;
-	for (itr = intersectingTriangles.begin(); itr != intersectingTriangles.end(); ++itr)
+	for (itr = triangles->begin(); itr != triangles->end(); ++itr)
 	{
 		ofs << "  facet normal  0.0  0.0  0.0" << std::endl;
 		ofs << "    outer loop" << std::endl;
@@ -222,21 +231,6 @@ void Mesh::writeTrianglesToFile(std::unique_ptr<Mesh>& innerMesh)
 		for (int j = 0; j < 3; j++)
 		{
 			vert = vertices.at(itr->getIndexOfVertexInMesh(j)).getCoordinates();
-			ofs << "      vertex  " << vert[0] << "  "
-				<< vert[1] << "  "
-				<< vert[2] << std::endl;
-		}
-		ofs << "    endloop" << std::endl;
-		ofs << "  endfacet" << std::endl;
-	}
-	for (itr = innerMesh->intersectingTriangles.begin(); itr != innerMesh->intersectingTriangles.end(); ++itr)
-	{
-		ofs << "  facet normal  0.0  0.0  0.0" << std::endl;
-		ofs << "    outer loop" << std::endl;
-		float* vert;
-		for (int j = 0; j < 3; j++)
-		{
-			vert = innerMesh->vertices.at(itr->getIndexOfVertexInMesh(j)).getCoordinates();
 			ofs << "      vertex  " << vert[0] << "  "
 				<< vert[1] << "  "
 				<< vert[2] << std::endl;
@@ -267,4 +261,29 @@ float* Mesh::getFloatArrayVertices()
 		vertexArray[i*3 + 2] = vertices[i].getCoordinate(2);
 	}
 	return vertexArray;
+}
+void Mesh::writeVerticesToFile(std::unique_ptr<std::vector<Vertex>>& vertices, std::string fileName)
+{
+	std::vector<Vertex>::iterator itr;
+	std::ofstream ofs(fileName);
+	ofs << "solid IntersectingTriangles" << std::endl;
+	float* vert;
+	for (itr = vertices->begin(); itr != vertices->end(); ++itr)
+	{
+		ofs << "  facet normal  0.0  0.0  0.0" << std::endl;
+		ofs << "    outer loop" << std::endl;
+		vert = itr->getCoordinates();
+		ofs << "      vertex  " << vert[0] << "  "
+			<< vert[1] << "  "
+			<< vert[2] << std::endl;
+		ofs << "      vertex  " << (vert[0]-0.1) << "  "
+			<< (vert[1]-0.1) << "  "
+			<< (vert[2]-0.1) << std::endl;
+		ofs << "      vertex  " << (vert[0] + 0.1) << "  "
+			<< (vert[1] + 0.1) << "  "
+			<< (vert[2] - 0.1) << std::endl;
+		ofs << "    endloop" << std::endl;
+		ofs << "  endfacet" << std::endl;
+	}
+	ofs << "endsolid vcg" << std::endl;
 }

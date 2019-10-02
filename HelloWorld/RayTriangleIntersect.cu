@@ -313,10 +313,10 @@ namespace Intersection {
 			//float vert1[3] = { 0.0, 1.0, 0.0 };
 			//float vert2[3] = { 0.0, 0.0, 1.0 };
 
-			float newDir[3];
+			/*float newDir[3];
 			newDir[0] = dir[0] - orig[0];
 			newDir[1] = dir[1] - orig[1];
-			newDir[2] = dir[2] - orig[2];
+			newDir[2] = dir[2] - orig[2];*/
 
 			float edge1[3], edge2[3], tvec[3], pvec[3], qvec[3];
 			float det, inv_det;
@@ -327,7 +327,8 @@ namespace Intersection {
 			SUB(edge2, vert2, vert0);
 
 			/* begin calculating determinant - also used to calculate U parameter */
-			CROSS(pvec, newDir, edge2);
+			//CROSS(pvec, newDir, edge2);
+			CROSS(pvec, dir, edge2);
 
 			/* if determinant is near zero, ray lies in plane of triangle */
 			det = DOT(edge1, pvec);
@@ -347,7 +348,8 @@ namespace Intersection {
 				}
 
 				/* calculate V parameter and test bounds */
-				v = DOT(newDir, qvec);
+				//v = DOT(newDir, qvec);
+				v = DOT(dir, qvec);
 				if (v < 0.0 || u + v > det) {
 					result[tid] = 0;
 					return;
@@ -364,7 +366,8 @@ namespace Intersection {
 				}
 
 				/* calculate V parameter and test bounds */
-				v = DOT(newDir, qvec);
+				//v = DOT(newDir, qvec);
+				v = DOT(dir, qvec);
 				if (v > 0.0 || u + v < det) {
 					result[tid] = 0;
 					return;
