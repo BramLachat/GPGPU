@@ -105,38 +105,44 @@ int main(int argc, char* argv[]) {
 void rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::unique_ptr<Mesh>& outerMesh)
 {
 	bool inside = true;
-	int numberOfTriangles = outerMesh->getNumberOfTriangles();
+	int numberOfOutsideTriangles = outerMesh->getNumberOfTriangles();
+	int numberOfInsideVertices = innerMesh->getNumberOfVertices();
 
 	//nodig om in kernel te controleren dat aantal keer dat test wordt uitgevoerd <= is dan het aantal driehoeken
-	int* numberOfCalculations;
-	handleCudaError(cudaMalloc((void**)& numberOfCalculations, sizeof(int)));
-	handleCudaError(cudaMemcpy(numberOfCalculations, &numberOfTriangles, sizeof(int), cudaMemcpyHostToDevice));
+	int* numberOfCudaCalculations;
+	handleCudaError(cudaMalloc((void**)& numberOfCudaCalculations, sizeof(int)));
+	handleCudaError(cudaMemcpy(numberOfCudaCalculations, &numberOfInsideVertices, sizeof(int), cudaMemcpyHostToDevice));
 
-	float* orig;
-	float* cudaOrig;
+	//float* orig;
+	//float* cudaOrig;
+	float* insideOrigins = innerMesh->getFloatArrayVertices();
+	float* cudaInsideOrigins;
+	int sizeInsideVertices = 3 * numberOfInsideVertices * sizeof(float);
+	handleCudaError(cudaMalloc((void**)& cudaInsideOrigins, sizeInsideVertices));
+	handleCudaError(cudaMemcpy(cudaInsideOrigins, insideOrigins, sizeInsideVertices, cudaMemcpyHostToDevice));
 	
 	float* cudaDir;
 	handleCudaError(cudaMalloc((void**)& cudaDir, 3*sizeof(float)));
 	handleCudaError(cudaMemcpy(cudaDir, dir, 3*sizeof(float), cudaMemcpyHostToDevice));
 
-	int* result = new int[numberOfTriangles];
-	int* cudaResult;
-	handleCudaError(cudaMalloc((void**)& cudaResult, numberOfTriangles * sizeof(int))); //dit hoeft geen lijst van int's te zijn boolean is voldoende
+	bool* result = new bool[numberOfInsideVertices];//HIER WAS IK GEBLEVEN
+	bool* cudaResult;
+	handleCudaError(cudaMalloc((void**)& cudaResult, numberOfInsideVertices * sizeof(bool)));
 
-	int* triangles = outerMesh->getIntArrayTriangles();
-	int* cudaTriangles;
-	int sizeTriangles = 3 * numberOfTriangles * sizeof(int);
-	handleCudaError(cudaMalloc((void**)& cudaTriangles, sizeTriangles));
-	handleCudaError(cudaMemcpy(cudaTriangles, triangles, sizeTriangles, cudaMemcpyHostToDevice));
+	int* outsideTriangles = outerMesh->getIntArrayTriangles();
+	int* cudaOutsideTriangles;
+	int sizeOutsideTriangles = 3 * numberOfOutsideTriangles * sizeof(int);
+	handleCudaError(cudaMalloc((void**)& cudaOutsideTriangles, sizeOutsideTriangles));
+	handleCudaError(cudaMemcpy(cudaOutsideTriangles, outsideTriangles, sizeOutsideTriangles, cudaMemcpyHostToDevice));
 
-	float* vertices = outerMesh->getFloatArrayVertices();
-	float* cudaVertices;
-	int sizeVertices = 3 * outerMesh->getNumberOfVertices() * sizeof(float);
-	handleCudaError(cudaMalloc((void**)& cudaVertices, sizeVertices));
-	handleCudaError(cudaMemcpy(cudaVertices, vertices, sizeVertices, cudaMemcpyHostToDevice));
+	float* outsideVertices = outerMesh->getFloatArrayVertices();
+	float* cudaOutsideVertices;
+	int sizeOutsideVertices = 3 * outerMesh->getNumberOfVertices() * sizeof(float);
+	handleCudaError(cudaMalloc((void**)& cudaOutsideVertices, sizeOutsideVertices));
+	handleCudaError(cudaMemcpy(cudaOutsideVertices, outsideVertices, sizeOutsideVertices, cudaMemcpyHostToDevice));
 
 	int totalIntersections = 0;
-
+	/*
 	for (int j = 0; j < innerMesh->getNumberOfVertices(); j++)
 	{
 		orig = (innerMesh->getVertexAtIndex(j))->getCoordinates();
@@ -166,15 +172,32 @@ void rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::u
 		{
 			inside = false;
 		}
-		cudaFree(cudaOrig);
+		//cudaFree(cudaOrig);
+	}*/
+	int numberOfBlocks = ((int)((numberOfInsideVertices + 255) / 256));
+	Intersection::intersect_triangleGPU<<<numberOfBlocks,256>>>(cudaInsideOrigins, cudaDir, cudaOutsideTriangles, cudaOutsideVertices, cudaResult, numberOfCudaCalculations, numberOfOutsideTriangles);
+	cudaError_t err = cudaGetLastError();
+	handleCudaError(err);
+
+	handleCudaError(cudaMemcpy(result, cudaResult, numberOfInsideVertices * sizeof(bool), cudaMemcpyDeviceToHost));
+
+	for (int i = 0; i < numberOfInsideVertices; i++)
+	{
+		if (!result[i])
+		{
+			inside = false;
+		}
 	}
+
+	cudaFree(cudaInsideOrigins);
 	cudaFree(cudaDir);
 	cudaFree(cudaResult);
-	cudaFree(cudaTriangles);
-	cudaFree(cudaVertices);
-	cudaFree(numberOfCalculations);
+	cudaFree(cudaOutsideTriangles);
+	cudaFree(cudaOutsideVertices);
+	cudaFree(numberOfCudaCalculations);
 	delete result;
-	std::cout << "totaal intersecties: " << totalIntersections << std::endl;
+
+	std::cout << "totaal intersecties: NOG TE IMPLEMENTEREN" << std::endl;
 	if (inside) { std::cout << "INSIDE" << std::endl; }
 	else { std::cout << "OUTSIDE" << std::endl; }
 }

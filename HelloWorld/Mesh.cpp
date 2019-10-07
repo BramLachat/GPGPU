@@ -103,7 +103,7 @@ void Mesh::rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh)
 			vert2 = V2->getCoordinates();
 			vert3 = V3->getCoordinates();
 			//if (Intersection::intersect_triangle3(orig, dirPerPoint, vert1, vert2, vert3, t, u, v) == 1)
-			if (Intersection::intersect_triangle3(orig, dir, vert1, vert2, vert3, t, u, v) == 1)
+			if (Intersection::intersect_triangleCPU(orig, dir, vert1, vert2, vert3, t, u, v) == 1)
 			{
 				numberOfIntersections++;
 				//std::cout << "1, ";

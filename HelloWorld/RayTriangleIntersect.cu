@@ -206,7 +206,7 @@ namespace Intersection {
 	/* code rewritten to do tests on the sign of the determinant */
 	/* the division is before the test of the sign of the det    */
 	/* and one CROSS has been moved out from the if-else if-else */
-	int intersect_triangle3(float orig[3], float dir[3],
+	__device__ int intersect_triangle3(float orig[3], float dir[3],
 		float vert0[3], float vert1[3], float vert2[3],
 		float* t, float* u, float* v)
 	{
@@ -215,15 +215,76 @@ namespace Intersection {
 		//std::cout << "vert2 = " << vert2[0] << ", " << vert2[1] << ", " << vert2[2] << std::endl;
 		//std::cout << "orig = " << orig[0] << ", " << orig[1] << ", " << orig[2] << std::endl;
 
-		//Transfer parameters to device memory (boek: programming massively parallel processors fig 3.10 p50)
-			//cudaMalloc(pointerToPointer, size);
-			//cudaMemcpy(pointerToPointer, pointer, size, cudaMemcpyHostToDevice);
+		float edge1[3], edge2[3], tvec[3], pvec[3], qvec[3];
+		float det, inv_det;
 
-		//Kernel invocation code
+		/* find vectors for two edges sharing vert0 */
+		SUB(edge1, vert1, vert0);
+		SUB(edge2, vert2, vert0);
 
-		//Transfer variables from device back to host
-			//cudaMemcpy(..., ..., size, cudaMemcpyDeviceToHost);
-			//cudaFree(pointer);
+		/* begin calculating determinant - also used to calculate U parameter */
+		CROSS(pvec, dir, edge2);
+
+		/* if determinant is near zero, ray lies in plane of triangle */
+		det = DOT(edge1, pvec);
+
+		/* calculate distance from vert0 to ray origin */
+		SUB(tvec, orig, vert0);
+		inv_det = 1.0 / det;
+
+		CROSS(qvec, tvec, edge1);
+
+		if (det > EPSILON)
+		{
+			*u = DOT(tvec, pvec);
+			if (*u < 0.0 || *u > det)
+				return 0;
+
+			/* calculate V parameter and test bounds */
+			*v = DOT(dir, qvec);
+			if (*v < 0.0 || *u + *v > det)
+				return 0;
+
+		}
+		else if (det < -EPSILON)
+		{
+			/* calculate U parameter and test bounds */
+			*u = DOT(tvec, pvec);
+			if (*u > 0.0 || *u < det)
+				return 0;
+
+			/* calculate V parameter and test bounds */
+			*v = DOT(dir, qvec);
+			if (*v > 0.0 || *u + *v < det)
+				return 0;
+		}
+		else return 0;  /* ray is parallell to the plane of the triangle */
+
+		*t = DOT(edge2, qvec) * inv_det;
+		(*u) *= inv_det;
+		(*v) *= inv_det;
+
+		if (*t > 0)
+		{
+			return 1;
+		}
+		else
+		{
+			return 0;
+		}
+	}
+
+	/* code rewritten to do tests on the sign of the determinant */
+	/* the division is before the test of the sign of the det    */
+	/* and one CROSS has been moved out from the if-else if-else */
+	int intersect_triangleCPU(float orig[3], float dir[3],
+		float vert0[3], float vert1[3], float vert2[3],
+		float* t, float* u, float* v)
+	{
+		//std::cout << "vert0 = " << vert0[0] << ", " << vert0[1] << ", " << vert0[2] << std::endl;
+		//std::cout << "vert1 = " << vert1[0] << ", " << vert1[1] << ", " << vert1[2] << std::endl;
+		//std::cout << "vert2 = " << vert2[0] << ", " << vert2[1] << ", " << vert2[2] << std::endl;
+		//std::cout << "orig = " << orig[0] << ", " << orig[1] << ", " << orig[2] << std::endl;
 
 		float edge1[3], edge2[3], tvec[3], pvec[3], qvec[3];
 		float det, inv_det;
@@ -395,6 +456,38 @@ namespace Intersection {
 			}
 		}
 		
+	}
+
+	//moeten de laatste 2 parameters pointers zijn?
+	__global__ void intersect_triangleGPU(float* origins, float dir[3],
+		int* triangles, float* vertices, bool* result, int* numberOfCalculations, int numberOfTriangles) //hier bepaalde waarden nog eens uitprinten voor eenvoudig voorbeeld om te kijken of wel degelijk gebeurt wat je verwacht
+	{
+		int tid = threadIdx.x + blockIdx.x * blockDim.x;
+		if (tid < *numberOfCalculations)
+		{
+			float orig[3] = { origins[tid * 3], origins[(tid * 3) + 1], origins[(tid * 3) + 2] };
+			int numberOfIntersections = 0;
+			for (int i = 0; i < numberOfTriangles; i++)
+			{
+				float vert0[3] = { vertices[triangles[i * 3] * 3], vertices[triangles[i * 3] * 3 + 1], vertices[triangles[i * 3] * 3 + 2] };
+				float vert1[3] = { vertices[triangles[(i * 3) + 1] * 3], vertices[triangles[(i * 3) + 1] * 3 + 1], vertices[triangles[(i * 3) + 1] * 3 + 2] };
+				float vert2[3] = { vertices[triangles[(i * 3) + 2] * 3], vertices[triangles[(i * 3) + 2] * 3 + 1], vertices[triangles[(i * 3) + 2] * 3 + 2] };
+				float t, u, v;
+				if (intersect_triangle3(orig, dir, vert0, vert1, vert2, &t, &u, &v) == 1)
+				{
+					numberOfIntersections++;
+				}
+			}
+			//printf("numberOfIntersections = %d\n", numberOfIntersections);
+			if (numberOfIntersections % 2 == 0)
+			{
+				result[tid] = false;
+			}
+			else 
+			{
+				result[tid] = true;
+			}
+		}
 	}
 
 }
