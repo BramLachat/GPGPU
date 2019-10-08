@@ -11,3 +11,4 @@ STL_Viewer/STL_Viewer/x64/
 Tri_Tri_Int/.vs/
 Tri_Tri_Int/bin/
 Tri_Tri_Int/x64/
+*.stl

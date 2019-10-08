@@ -221,7 +221,8 @@ void Mesh::addVertexIndex(const std::string& s, int index)
 void Mesh::writeTrianglesToFile(std::unique_ptr<std::vector<Triangle>>& triangles, std::string fileName)
 {
 	std::vector<Triangle>::iterator itr;
-	std::ofstream ofs(fileName);
+	std::string path = "C:\\Users\\hla\\Documents\\Masterproef\\GPGPU\\Output\\" + fileName;
+	std::ofstream ofs(path);
 	ofs << "solid IntersectingTriangles" << std::endl;
 	for (itr = triangles->begin(); itr != triangles->end(); ++itr)
 	{
@@ -265,7 +266,8 @@ float* Mesh::getFloatArrayVertices()
 void Mesh::writeVerticesToFile(std::unique_ptr<std::vector<Vertex>>& vertices, std::string fileName)
 {
 	std::vector<Vertex>::iterator itr;
-	std::ofstream ofs(fileName);
+	std::string path = "C:\\Users\\hla\\Documents\\Masterproef\\GPGPU\\Output\\" + fileName;
+	std::ofstream ofs(path);
 	ofs << "solid IntersectingTriangles" << std::endl;
 	float* vert;
 	for (itr = vertices->begin(); itr != vertices->end(); ++itr)

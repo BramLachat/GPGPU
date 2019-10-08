@@ -1,33 +1,54 @@
-RayTriangleIntersection
-Mesh			#Vertices	#Triangles	CPUTime
-Box_Centered		8		12		0ms		(10)
-Sphericon		122		240		0ms		(100)
-BB_Bal			3007		6014		461ms		(1000)
-Hull_Grav		27194		54492		32220ms		(10000)
-Pokemon			207964		416002				(100000)
-(Helmet			1921966		3888600				(1000000))
+Mesh		#Vertices	#Triangles
 
-TriangleTriangleIntersection
-Mesh			#Vertices	#Triangles	CPUTime
-Box_Centered		8		12				(10)
-Sphericon		122		240				(100)
-BB_Bal			3006		6012				(1000)
-Hull_Grav		27194		54492				(10000)
-Pokemon			207964		416002				(100000)
-(Helmet			1921966		3888600				(1000000))
+Mesh10		8		12		
+Mesh100		122		240
+Mesh1000	3007		6014
+Mesh10000	27194		54492
+Mesh100000	207964		416002
+(Helmet		1921966		3888600)
 
-Box_Centered_Small_Bin.stl
-Box_Centered_Big_Bin.stl
+RayTriangleIntersection - TestCase1
+	
+Mesh			CPUTime		GPUTime
 
-Sphericon_SmallBin.stl
-SphericonBin.stl
+Mesh10-Mesh10		
+Mesh10-Mesh100		
+Mesh10-Mesh1000		
+Mesh10-Mesh10000	
+Mesh10-Mesh100000	
 
-BB_Ball_CenteredBin.stl
-BB_Ball_Centered_BigBin.stl
+RayTriangleIntersection - TestCase2
 
-Hull_GravBin.stl
-Hull_Grav_BigBin.stl
+Mesh			CPUTime		GPUTime
 
-PokemonBin.stl
-Pokemon_BigBin.stl
+Mesh100000-Mesh10
+Mesh100000-Mesh100
+Mesh100000-Mesh1000
+Mesh100000-Mesh10000
+Mesh100000-Mesh100000
 
+RayTriangleIntersection - TestCase3
+
+Mesh			CPUTime		GPUTime
+
+Mesh10-Mesh10						(inside)
+Mesh10-Mesh10						(intersecting)
+Mesh10-Mesh10						(outside)
+Mesh100-Mesh100						(inside)
+Mesh100-Mesh100						(intersecting)
+Mesh100-Mesh100						(outside)
+Mesh1000-Mesh1000					(inside)
+Mesh1000-Mesh1000					(intersecting)
+Mesh1000-Mesh1000					(outside)
+Mesh10000-Mesh10000					(inside)
+Mesh10000-Mesh10000					(intersecting)
+Mesh10000-Mesh10000					(outside)
+Mesh100000-Mesh100000					(inside)
+Mesh100000-Mesh100000					(intersecting)
+Mesh100000-Mesh100000					(outside)
+
+C:\Users\hla\Documents\Masterproef\GPGPU\Mesh10.stl
+C:\Users\hla\Documents\Masterproef\GPGPU\Mesh100.stl
+C:\Users\hla\Documents\Masterproef\GPGPU\Mesh1000.stl
+C:\Users\hla\Documents\Masterproef\GPGPU\Mesh10000.stl
+C:\Users\hla\Documents\Masterproef\GPGPU\Mesh100000.stl
