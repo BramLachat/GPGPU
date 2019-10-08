@@ -31,7 +31,7 @@ public:
 	void addVertexIndex(const std::string& s, int index);
 	void writeTrianglesToFile(std::unique_ptr<std::vector<Triangle>>& triangles, std::string fileName);
 	int* getIntArrayTriangles();
-	float* Mesh::getFloatArrayVertices();
+	float* getFloatArrayVertices();
 	void writeVerticesToFile(std::unique_ptr<std::vector<Vertex>>& vertices, std::string fileName);
 };
 #endif // !MESH_H

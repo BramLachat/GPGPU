@@ -460,10 +460,10 @@ namespace Intersection {
 
 	//moeten de laatste 2 parameters pointers zijn?
 	__global__ void intersect_triangleGPU(float* origins, float dir[3],
-		int* triangles, float* vertices, bool* result, int* numberOfCalculations, int numberOfTriangles) //hier bepaalde waarden nog eens uitprinten voor eenvoudig voorbeeld om te kijken of wel degelijk gebeurt wat je verwacht
+		int* triangles, float* vertices, bool* result, int numberOfCalculations, int numberOfTriangles, int* intersectionsPerThread, float3* outsideVertices) //hier bepaalde waarden nog eens uitprinten voor eenvoudig voorbeeld om te kijken of wel degelijk gebeurt wat je verwacht
 	{
 		int tid = threadIdx.x + blockIdx.x * blockDim.x;
-		if (tid < *numberOfCalculations)
+		if (tid < numberOfCalculations)
 		{
 			float orig[3] = { origins[tid * 3], origins[(tid * 3) + 1], origins[(tid * 3) + 2] };
 			int numberOfIntersections = 0;
@@ -479,9 +479,13 @@ namespace Intersection {
 				}
 			}
 			//printf("numberOfIntersections = %d\n", numberOfIntersections);
+			intersectionsPerThread[tid] = numberOfIntersections;
 			if (numberOfIntersections % 2 == 0)
 			{
 				result[tid] = false;
+				outsideVertices[tid].x = orig[0];
+				outsideVertices[tid].y = orig[1];
+				outsideVertices[tid].z = orig[2];
 			}
 			else 
 			{

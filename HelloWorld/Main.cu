@@ -2,6 +2,7 @@
 #include <iostream>
 #include <chrono>
 #include <cuda_runtime.h>
+#include <thrust/device_vector.h>
 //#include <memory> //needed for smart pointers
 
 #include "Mesh.h"
@@ -109,9 +110,9 @@ void rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::u
 	int numberOfInsideVertices = innerMesh->getNumberOfVertices();
 
 	//nodig om in kernel te controleren dat aantal keer dat test wordt uitgevoerd <= is dan het aantal driehoeken
-	int* numberOfCudaCalculations;
-	handleCudaError(cudaMalloc((void**)& numberOfCudaCalculations, sizeof(int)));
-	handleCudaError(cudaMemcpy(numberOfCudaCalculations, &numberOfInsideVertices, sizeof(int), cudaMemcpyHostToDevice));
+	int numberOfCudaCalculations = numberOfInsideVertices;
+	//handleCudaError(cudaMalloc((void**)& numberOfCudaCalculations, sizeof(int)));
+	//handleCudaError(cudaMemcpy(numberOfCudaCalculations, &numberOfInsideVertices, sizeof(int), cudaMemcpyHostToDevice));
 
 	//float* orig;
 	//float* cudaOrig;
@@ -125,7 +126,7 @@ void rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::u
 	handleCudaError(cudaMalloc((void**)& cudaDir, 3*sizeof(float)));
 	handleCudaError(cudaMemcpy(cudaDir, dir, 3*sizeof(float), cudaMemcpyHostToDevice));
 
-	bool* result = new bool[numberOfInsideVertices];//HIER WAS IK GEBLEVEN
+	bool* result = new bool[numberOfInsideVertices];
 	bool* cudaResult;
 	handleCudaError(cudaMalloc((void**)& cudaResult, numberOfInsideVertices * sizeof(bool)));
 
@@ -140,6 +141,13 @@ void rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::u
 	int sizeOutsideVertices = 3 * outerMesh->getNumberOfVertices() * sizeof(float);
 	handleCudaError(cudaMalloc((void**)& cudaOutsideVertices, sizeOutsideVertices));
 	handleCudaError(cudaMemcpy(cudaOutsideVertices, outsideVertices, sizeOutsideVertices, cudaMemcpyHostToDevice));
+
+	thrust::device_vector<int> intersectionsPerThread(numberOfInsideVertices);
+	int* d_intersectionsPerThread = thrust::raw_pointer_cast(&intersectionsPerThread[0]);
+
+	thrust::device_vector<float3> resultVertices(numberOfInsideVertices);
+	float3* d_resultVertices = thrust::raw_pointer_cast(&resultVertices[0]);
+	//float3* d_outsideVertices = thrust::raw_pointer_cast(&outsideVertices[0]); LUKT NIET!!!
 
 	int totalIntersections = 0;
 	/*
@@ -175,11 +183,28 @@ void rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::u
 		//cudaFree(cudaOrig);
 	}*/
 	int numberOfBlocks = ((int)((numberOfInsideVertices + 255) / 256));
-	Intersection::intersect_triangleGPU<<<numberOfBlocks,256>>>(cudaInsideOrigins, cudaDir, cudaOutsideTriangles, cudaOutsideVertices, cudaResult, numberOfCudaCalculations, numberOfOutsideTriangles);
+	Intersection::intersect_triangleGPU<<<numberOfBlocks,256>>>(cudaInsideOrigins, cudaDir, cudaOutsideTriangles, cudaOutsideVertices, cudaResult, numberOfCudaCalculations, numberOfOutsideTriangles, d_intersectionsPerThread, d_resultVertices);
 	cudaError_t err = cudaGetLastError();
 	handleCudaError(err);
 
 	handleCudaError(cudaMemcpy(result, cudaResult, numberOfInsideVertices * sizeof(bool), cudaMemcpyDeviceToHost));
+
+	std::vector<int> h_intersectionsPerThread(intersectionsPerThread.size());
+	thrust::copy(intersectionsPerThread.begin(), intersectionsPerThread.end(), h_intersectionsPerThread.begin());
+
+	std::vector<float3> h_resultVertices(resultVertices.size());
+	thrust::copy(resultVertices.begin(), resultVertices.end(), h_resultVertices.begin());
+	std::unique_ptr<std::vector<Vertex>> verticesToWrite = std::make_unique<std::vector<Vertex>>();
+	verticesToWrite->reserve(h_resultVertices.size());
+	float x, y, z;
+	for (int i = 0; i < h_resultVertices.size(); i++) 
+	{
+		x = h_resultVertices[i].x;
+		y = h_resultVertices[i].y;
+		z = h_resultVertices[i].z;
+		if (x + y + z != 0) { verticesToWrite->emplace_back(x, y, z); }
+	}
+	innerMesh->writeVerticesToFile(verticesToWrite, "OutsideVerticesCUDA.stl");
 
 	for (int i = 0; i < numberOfInsideVertices; i++)
 	{
@@ -187,6 +212,7 @@ void rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::u
 		{
 			inside = false;
 		}
+		totalIntersections += h_intersectionsPerThread[i];
 	}
 
 	cudaFree(cudaInsideOrigins);
@@ -194,10 +220,13 @@ void rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::u
 	cudaFree(cudaResult);
 	cudaFree(cudaOutsideTriangles);
 	cudaFree(cudaOutsideVertices);
-	cudaFree(numberOfCudaCalculations);
+	//cudaFree(numberOfCudaCalculations);
 	delete result;
+	delete insideOrigins;
+	delete outsideTriangles;
+	delete outsideVertices;
 
-	std::cout << "totaal intersecties: NOG TE IMPLEMENTEREN" << std::endl;
+	std::cout << "totaal intersecties: " << totalIntersections << std::endl;
 	if (inside) { std::cout << "INSIDE" << std::endl; }
 	else { std::cout << "OUTSIDE" << std::endl; }
 }

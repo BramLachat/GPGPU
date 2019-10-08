@@ -29,7 +29,7 @@ namespace Intersection {
 		int* triangles, float* vertices, int* result, int* numberOfCalculations);
 
 	__global__ void intersect_triangleGPU(float* origins, float dir[3],
-		int* triangles, float* vertices, bool* result, int* numberOfCalculations, int numberOfTriangles);
+		int* triangles, float* vertices, bool* result, int numberOfCalculations, int numberOfTriangles, int* intersectionsPerThread, float3* d_outsideVertices);
 }
 
 #endif
