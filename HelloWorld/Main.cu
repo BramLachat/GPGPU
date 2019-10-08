@@ -70,23 +70,11 @@ int main(int argc, char* argv[]) {
 
 	if (RayTriangle == 0)
 	{
-		auto start = std::chrono::high_resolution_clock::now(); //start time measurement
-
 		//2 opties om unique ptr mee te geven als argument aan een functie:
 		//https://stackoverflow.com/questions/30905487/how-can-i-pass-stdunique-ptr-into-a-function
 		triangleMesh_Outside->rayTriangleIntersect(direction, triangleMesh_Inside);
 
-		auto end = std::chrono::high_resolution_clock::now(); //stop time measurement
-		auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-		std::cout << "Time = " << duration << "ms" << std::endl;
-
-		start = std::chrono::high_resolution_clock::now(); //start time measurement
-
 		rayTriangleIntersect(direction, triangleMesh_Inside, triangleMesh_Outside);
-
-		end = std::chrono::high_resolution_clock::now(); //stop time measurement
-		duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-		std::cout << "Time = " << duration << "ms" << std::endl;
 	}
 	else
 	{
@@ -105,6 +93,9 @@ int main(int argc, char* argv[]) {
 
 void rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::unique_ptr<Mesh>& outerMesh)
 {
+	std::cout << "Calculating intersections!" << std::endl;
+	auto start = std::chrono::high_resolution_clock::now(); //start time measurement
+
 	bool inside = true;
 	int numberOfOutsideTriangles = outerMesh->getNumberOfTriangles();
 	int numberOfInsideVertices = innerMesh->getNumberOfVertices();
@@ -204,7 +195,6 @@ void rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::u
 		z = h_resultVertices[i].z;
 		if (x + y + z != 0) { verticesToWrite->emplace_back(x, y, z); }
 	}
-	innerMesh->writeVerticesToFile(verticesToWrite, "OutsideVerticesCUDA.stl");
 
 	for (int i = 0; i < numberOfInsideVertices; i++)
 	{
@@ -214,6 +204,13 @@ void rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::u
 		}
 		totalIntersections += h_intersectionsPerThread[i];
 	}
+
+	auto end = std::chrono::high_resolution_clock::now(); //stop time measurement
+	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+	std::cout << "Time = " << duration << "ms" << std::endl;
+
+	std::cout << "Writing to file!" << std::endl;
+	innerMesh->writeVerticesToFile(verticesToWrite, "OutsideVerticesCUDA.stl");
 
 	cudaFree(cudaInsideOrigins);
 	cudaFree(cudaDir);

@@ -7,48 +7,65 @@ Mesh10000	27194		54492
 Mesh100000	207964		416002
 (Helmet		1921966		3888600)
 
-RayTriangleIntersection - TestCase1
+RayTriangleIntersection - TestCase1 (#threads=, #work!=)
 	
 Mesh			CPUTime		GPUTime
 
-Mesh10-Mesh10		
-Mesh10-Mesh100		
-Mesh10-Mesh1000		
-Mesh10-Mesh10000	
-Mesh10-Mesh100000	
+Mesh10-Mesh10		0ms		226ms
+Mesh10-Mesh100		0ms		234ms		
+Mesh10-Mesh1000		1ms		226ms
+Mesh10-Mesh10000	11ms		245ms
+Mesh10-Mesh100000	92ms		440ms
 
-RayTriangleIntersection - TestCase2
+RayTriangleIntersection - TestCase2 (#threads!=, #work=)
+	
+Mesh			CPUTime		GPUTime
+
+Mesh10-Mesh10		0ms		232ms
+Mesh100-Mesh10		0ms		230ms		
+Mesh1000-Mesh10		1ms		219ms
+Mesh10000-Mesh10	9ms		222ms
+Mesh100000-Mesh10	63ms		234ms
+
+RayTriangleIntersection - TestCase3 (#threads=, #work!=)
 
 Mesh			CPUTime		GPUTime
 
-Mesh100000-Mesh10
-Mesh100000-Mesh100
-Mesh100000-Mesh1000
-Mesh100000-Mesh10000
-Mesh100000-Mesh100000
+Mesh100000-Mesh10	61ms		225ms
+Mesh100000-Mesh100	1115ms		238ms
+Mesh100000-Mesh1000	37281ms		273ms
+Mesh100000-Mesh10000	...ms		525ms
+Mesh100000-Mesh100000	...ms		2434ms
 
-RayTriangleIntersection - TestCase3
+RayTriangleIntersection - TestCase4 (#threads!=, #work=)
+	
+Mesh			CPUTime		GPUTime
+
+Mesh10-Mesh100000	92ms		442ms	
+Mesh100-Mesh100000	1415ms		446ms			
+Mesh1000-Mesh100000	34922ms		456ms	
+Mesh10000-Mesh100000	...ms		537ms
+Mesh100000-Mesh100000	...ms		2416ms
+
+RayTriangleIntersection - TestCase5
 
 Mesh			CPUTime		GPUTime
 
 Mesh10-Mesh10						(inside)
 Mesh10-Mesh10						(intersecting)
 Mesh10-Mesh10						(outside)
-Mesh100-Mesh100						(inside)
-Mesh100-Mesh100						(intersecting)
-Mesh100-Mesh100						(outside)
-Mesh1000-Mesh1000					(inside)
-Mesh1000-Mesh1000					(intersecting)
-Mesh1000-Mesh1000					(outside)
-Mesh10000-Mesh10000					(inside)
-Mesh10000-Mesh10000					(intersecting)
-Mesh10000-Mesh10000					(outside)
+Mesh100-Mesh100		0ms		232ms		(inside)
+Mesh100-Mesh100		0ms		221ms		(intersecting)
+Mesh100-Mesh100		0ms		224ms		(outside)
+Mesh1000-Mesh1000	547ms		225ms		(inside)
+Mesh1000-Mesh1000	542ms		218ms		(intersecting)
+Mesh1000-Mesh1000	541ms		225ms		(outside)
+Mesh10000-Mesh10000	39039ms		266ms		(inside)
+Mesh10000-Mesh10000	39122ms		277ms		(intersecting)
+Mesh10000-Mesh10000	39120ms		268ms		(outside)
 Mesh100000-Mesh100000					(inside)
 Mesh100000-Mesh100000					(intersecting)
 Mesh100000-Mesh100000					(outside)
 
-C:\Users\hla\Documents\Masterproef\GPGPU\Mesh10.stl
-C:\Users\hla\Documents\Masterproef\GPGPU\Mesh100.stl
-C:\Users\hla\Documents\Masterproef\GPGPU\Mesh1000.stl
-C:\Users\hla\Documents\Masterproef\GPGPU\Mesh10000.stl
-C:\Users\hla\Documents\Masterproef\GPGPU\Mesh100000.stl
+C:\Users\hla\Documents\Masterproef\GPGPU\Meshes\Mesh10.stl
+D:\Masterproef\GPGPU\Meshes\Mesh10.stl
