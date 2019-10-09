@@ -138,6 +138,8 @@ void Mesh::rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh)
 }
 void Mesh::triangleTriangleIntersect(std::unique_ptr<Mesh>& innerMesh)
 {
+	auto start = std::chrono::high_resolution_clock::now(); //start time measurement
+
 	float* vert1_1;
 	float* vert1_2;
 	float* vert1_3;
@@ -153,7 +155,7 @@ void Mesh::triangleTriangleIntersect(std::unique_ptr<Mesh>& innerMesh)
 
 	bool inside = true;
 
-	std::cout << "start berekening" << std::endl;
+	std::cout << "Calculating intersecting triangles!" << std::endl;
 
 	for (int j = 0; j < innerMesh->getNumberOfTriangles(); j++)
 	{
@@ -173,13 +175,13 @@ void Mesh::triangleTriangleIntersect(std::unique_ptr<Mesh>& innerMesh)
 			if (Intersection::NoDivTriTriIsect(vert1_1, vert1_2, vert1_3, vert2_1, vert2_2, vert2_3) == 1)
 			{
 				//list printed with intersecting triangles
-				intersectingTriangles1->push_back(innerMesh->triangles.at(j));
-				intersectingTriangles2->push_back(triangles.at(i));
+				intersectingTriangles1->push_back(*t1);
+				intersectingTriangles2->push_back(*t2);
 
 				numberOfIntersections++;
 			}
 		}
-		std::cout << "aantal intersecties = " << numberOfIntersections << std::endl;
+		//std::cout << "aantal intersecties = " << numberOfIntersections << std::endl;
 		if (numberOfIntersections != 0)
 		{
 			inside = false;
@@ -187,8 +189,14 @@ void Mesh::triangleTriangleIntersect(std::unique_ptr<Mesh>& innerMesh)
 	}
 	if (inside) { std::cout << "SNIJDEN NIET" << std::endl; }
 	else { std::cout << "SNIJDEN WEL" << std::endl; }
-	writeTrianglesToFile(intersectingTriangles1, "IntersectingTriangles1.stl");
-	writeTrianglesToFile(intersectingTriangles2, "IntersectingTriangles2.stl");
+
+	auto end = std::chrono::high_resolution_clock::now(); //stop time measurement
+	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+	std::cout << "Time = " << duration << "ms" << std::endl;
+
+	std::cout << "Writing to file!" << std::endl;
+	writeTrianglesToFile(intersectingTriangles1, innerVertices, "IntersectingTriangles1.stl");
+	writeTrianglesToFile(intersectingTriangles2, &vertices, "IntersectingTriangles2.stl");
 }
 int Mesh::getLastVertex()
 {
@@ -228,11 +236,11 @@ void Mesh::addVertexIndex(const std::string& s, int index)
 {
 	VertexIndices.insert(std::pair<std::string, int>(s, index));
 }
-void Mesh::writeTrianglesToFile(std::unique_ptr<std::vector<Triangle>>& triangles, std::string fileName)
+void Mesh::writeTrianglesToFile(std::unique_ptr<std::vector<Triangle>>& triangles, std::vector<Vertex>* vertices, std::string fileName)
 {
 	std::vector<Triangle>::iterator itr;
-	//std::string path = "C:\\Users\\hla\\Documents\\Masterproef\\GPGPU\\Output\\" + fileName;
-	std::string path = "D:\\Masterproef\\GPGPU\\Output\\" + fileName;
+	std::string path = "C:\\Users\\hla\\Documents\\Masterproef\\GPGPU\\Output\\" + fileName;
+	//std::string path = "D:\\Masterproef\\GPGPU\\Output\\" + fileName;
 	std::ofstream ofs(path);
 	ofs << "solid IntersectingTriangles" << std::endl;
 	for (itr = triangles->begin(); itr != triangles->end(); ++itr)
@@ -242,7 +250,7 @@ void Mesh::writeTrianglesToFile(std::unique_ptr<std::vector<Triangle>>& triangle
 		float* vert;
 		for (int j = 0; j < 3; j++)
 		{
-			vert = vertices.at(itr->getIndexOfVertexInMesh(j)).getCoordinates();
+			vert = vertices->at(itr->getIndexOfVertexInMesh(j)).getCoordinates();
 			ofs << "      vertex  " << vert[0] << "  "
 				<< vert[1] << "  "
 				<< vert[2] << std::endl;
@@ -277,8 +285,8 @@ float* Mesh::getFloatArrayVertices()
 void Mesh::writeVerticesToFile(std::unique_ptr<std::vector<Vertex>>& vertices, std::string fileName)
 {
 	std::vector<Vertex>::iterator itr;
-	//std::string path = "C:\\Users\\hla\\Documents\\Masterproef\\GPGPU\\Output\\" + fileName;
-	std::string path = "D:\\Masterproef\\GPGPU\\Output\\" + fileName;
+	std::string path = "C:\\Users\\hla\\Documents\\Masterproef\\GPGPU\\Output\\" + fileName;
+	//std::string path = "D:\\Masterproef\\GPGPU\\Output\\" + fileName;
 	std::ofstream ofs(path);
 	ofs << "solid IntersectingTriangles" << std::endl;
 	float* vert;

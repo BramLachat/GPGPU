@@ -29,7 +29,7 @@ public:
 	Vertex* getVertexAtIndex(int index);
 	void resize();
 	void addVertexIndex(const std::string& s, int index);
-	void writeTrianglesToFile(std::unique_ptr<std::vector<Triangle>>& triangles, std::string fileName);
+	void writeTrianglesToFile(std::unique_ptr<std::vector<Triangle>>& triangles, std::vector<Vertex>* vertices, std::string fileName);
 	int* getIntArrayTriangles();
 	float* getFloatArrayVertices();
 	void writeVerticesToFile(std::unique_ptr<std::vector<Vertex>>& vertices, std::string fileName);
