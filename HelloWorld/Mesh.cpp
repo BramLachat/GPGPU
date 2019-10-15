@@ -84,7 +84,7 @@ void Mesh::rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh)
 	bool inside = true;
 	int totalIntersections = 0;
 
-	std::cout << "Calculating intersections!" << std::endl;
+	std::cout << "\t\t\tCalculating intersections! (CPU)" << std::endl;
 
 	for(int j = 0 ; j < innerMesh->getNumberOfVertices() ; j++)
 	{
@@ -126,7 +126,7 @@ void Mesh::rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh)
 
 	auto end = std::chrono::high_resolution_clock::now(); //stop time measurement
 	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-	std::cout << "Time = " << duration << "ms" << std::endl;
+	std::cout << "\t\t\tTime CPU = " << duration << "ms" << std::endl;
 
 	std::cout << "totaal intersecties = " << totalIntersections << std::endl;
 	delete t; delete u; delete v;
@@ -155,7 +155,7 @@ void Mesh::triangleTriangleIntersect(std::unique_ptr<Mesh>& innerMesh)
 
 	bool inside = true;
 
-	std::cout << "Calculating intersecting triangles!" << std::endl;
+	std::cout << "\t\t\tCalculating intersecting triangles! (CPU)" << std::endl;
 
 	for (int j = 0; j < innerMesh->getNumberOfTriangles(); j++)
 	{
@@ -192,7 +192,7 @@ void Mesh::triangleTriangleIntersect(std::unique_ptr<Mesh>& innerMesh)
 
 	auto end = std::chrono::high_resolution_clock::now(); //stop time measurement
 	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-	std::cout << "Time = " << duration << "ms" << std::endl;
+	std::cout << "\t\t\tTime CPU = " << duration << "ms" << std::endl;
 
 	std::cout << "Writing to file!" << std::endl;
 	writeTrianglesToFile(intersectingTriangles1, innerVertices, "IntersectingTriangles1.stl");
@@ -239,8 +239,8 @@ void Mesh::addVertexIndex(const std::string& s, int index)
 void Mesh::writeTrianglesToFile(std::unique_ptr<std::vector<Triangle>>& triangles, std::vector<Vertex>* vertices, std::string fileName)
 {
 	std::vector<Triangle>::iterator itr;
-	std::string path = "C:\\Users\\hla\\Documents\\Masterproef\\GPGPU\\Output\\" + fileName;
-	//std::string path = "D:\\Masterproef\\GPGPU\\Output\\" + fileName;
+	//std::string path = "C:\\Users\\hla\\Documents\\Masterproef\\GPGPU\\Output\\" + fileName;
+	std::string path = "D:\\Masterproef\\GPGPU\\Output\\" + fileName;
 	std::ofstream ofs(path);
 	ofs << "solid IntersectingTriangles" << std::endl;
 	for (itr = triangles->begin(); itr != triangles->end(); ++itr)
@@ -260,33 +260,49 @@ void Mesh::writeTrianglesToFile(std::unique_ptr<std::vector<Triangle>>& triangle
 	}
 	ofs << "endsolid vcg" << std::endl;
 }
-int* Mesh::getIntArrayTriangles()
+int3* Mesh::getInt3ArrayTriangles()
 {
-	int* triangleArray = new int[triangles.size() * 3];
+	int3* triangleArray = new int3[triangles.size()];
 	for (int i = 0 ; i < triangles.size() ; i++)
 	{
-		triangleArray[i*3] = triangles[i].getIndexOfVertexInMesh(0);
-		triangleArray[i*3+1] = triangles[i].getIndexOfVertexInMesh(1);
-		triangleArray[i*3+2] = triangles[i].getIndexOfVertexInMesh(2);
+		triangleArray[i] = triangles[i].getIndexOfVerticesInMesh();
 	}
 	return triangleArray;
 }
-float* Mesh::getFloatArrayVertices()
+thrust::host_vector<int3> Mesh::getTrianglesVector()
 {
-	float* vertexArray = new float[vertices.size() * 3];
+	thrust::host_vector<int3> result(triangles.size());
+	for (int i = 0; i < triangles.size(); i++) 
+	{
+
+		result[i] = triangles[i].getIndexOfVerticesInMesh();
+	}
+	return result;
+}
+float3* Mesh::getFloat3ArrayVertices()
+{
+	float3* vertexArray = new float3[vertices.size()];
 	for (int i = 0; i < vertices.size(); i++)
 	{
-		vertexArray[i*3] = vertices[i].getCoordinate(0);
-		vertexArray[i*3 + 1] = vertices[i].getCoordinate(1);
-		vertexArray[i*3 + 2] = vertices[i].getCoordinate(2);
+		vertexArray[i] = vertices[i].getCoordinatesFloat3();
 	}
 	return vertexArray;
+}
+thrust::host_vector<float3> Mesh::getVerticesVector()
+{
+	thrust::host_vector<float3> result(vertices.size());
+	for (int i = 0; i < vertices.size(); i++)
+	{
+
+		result[i] = vertices[i].getCoordinatesFloat3();
+	}
+	return result;
 }
 void Mesh::writeVerticesToFile(std::unique_ptr<std::vector<Vertex>>& vertices, std::string fileName)
 {
 	std::vector<Vertex>::iterator itr;
-	std::string path = "C:\\Users\\hla\\Documents\\Masterproef\\GPGPU\\Output\\" + fileName;
-	//std::string path = "D:\\Masterproef\\GPGPU\\Output\\" + fileName;
+	//std::string path = "C:\\Users\\hla\\Documents\\Masterproef\\GPGPU\\Output\\" + fileName;
+	std::string path = "D:\\Masterproef\\GPGPU\\Output\\" + fileName;
 	std::ofstream ofs(path);
 	ofs << "solid IntersectingTriangles" << std::endl;
 	float* vert;

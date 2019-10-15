@@ -2,7 +2,6 @@
 #include <iostream>
 
 #include "Vertex.h"
-#include <string>
 
 int Vertex::copies = 0;
 Vertex::Vertex()
@@ -69,6 +68,10 @@ float* Vertex::getCoordinates()
 float Vertex::getCoordinate(int i)
 {
 	return point[i];
+}
+float3 Vertex::getCoordinatesFloat3()
+{
+	return make_float3(point[0], point[1], point[2]);
 }
 /*Vertex::~Vertex()
 {

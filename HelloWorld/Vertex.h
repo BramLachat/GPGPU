@@ -2,6 +2,7 @@
 #define VERTEX_H
 
 #include <string>
+#include <cuda_runtime.h>
 
 class Vertex
 {
@@ -19,6 +20,7 @@ public:
 	float getCoordinate(int i);
 	void schrijf();
 	std::string toString() const;
+	float3 getCoordinatesFloat3();
 	//~Vertex();
 };
 #endif
