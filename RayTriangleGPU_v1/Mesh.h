@@ -3,7 +3,6 @@
 
 #include <string>
 #include <map>
-#include <thrust/device_vector.h>
 
 #include "Vertex.h"
 #include "Triangle.h"
@@ -31,10 +30,8 @@ public:
 	void resize();
 	void addVertexIndex(const std::string& s, int index);
 	void writeTrianglesToFile(std::unique_ptr<std::vector<Triangle>>& triangles, std::vector<Vertex>* vertices, std::string fileName);
-	int3* getInt3ArrayTriangles();
-	thrust::host_vector<int3> getTrianglesVector();
-	float3* getFloat3ArrayVertices();
-	thrust::host_vector<float3> getVerticesVector();
+	int* getIntArrayTriangles();
+	float* getFloatArrayVertices();
 	void writeVerticesToFile(std::unique_ptr<std::vector<Vertex>>& vertices, std::string fileName);
 };
 #endif // !MESH_H

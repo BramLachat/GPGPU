@@ -1,0 +1,7 @@
+nvvp -vm "C:\Program Files\Java\jdk1.8.0_221\jre\bin\java" to open visual profiler
+
+nvprof STL_Reader.exe
+
+nvprof --print-gpu-trace STL_Reader.exe
+
+nvprof --analysis-metrics -o Test.nvprof STL_Reader.exe to create .nvprof file for visual profiler

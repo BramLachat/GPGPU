@@ -260,43 +260,27 @@ void Mesh::writeTrianglesToFile(std::unique_ptr<std::vector<Triangle>>& triangle
 	}
 	ofs << "endsolid vcg" << std::endl;
 }
-int3* Mesh::getInt3ArrayTriangles()
+int* Mesh::getIntArrayTriangles()
 {
-	int3* triangleArray = new int3[triangles.size()];
+	int* triangleArray = new int[triangles.size() * 3];
 	for (int i = 0 ; i < triangles.size() ; i++)
 	{
-		triangleArray[i] = triangles[i].getIndexOfVerticesInMesh();
+		triangleArray[i*3] = triangles[i].getIndexOfVertexInMesh(0);
+		triangleArray[i*3+1] = triangles[i].getIndexOfVertexInMesh(1);
+		triangleArray[i*3+2] = triangles[i].getIndexOfVertexInMesh(2);
 	}
 	return triangleArray;
 }
-thrust::host_vector<int3> Mesh::getTrianglesVector()
+float* Mesh::getFloatArrayVertices()
 {
-	thrust::host_vector<int3> result(triangles.size());
-	for (int i = 0; i < triangles.size(); i++) 
-	{
-
-		result[i] = triangles[i].getIndexOfVerticesInMesh();
-	}
-	return result;
-}
-float3* Mesh::getFloat3ArrayVertices()
-{
-	float3* vertexArray = new float3[vertices.size()];
+	float* vertexArray = new float[vertices.size() * 3];
 	for (int i = 0; i < vertices.size(); i++)
 	{
-		vertexArray[i] = vertices[i].getCoordinatesFloat3();
+		vertexArray[i*3] = vertices[i].getCoordinate(0);
+		vertexArray[i*3 + 1] = vertices[i].getCoordinate(1);
+		vertexArray[i*3 + 2] = vertices[i].getCoordinate(2);
 	}
 	return vertexArray;
-}
-thrust::host_vector<float3> Mesh::getVerticesVector()
-{
-	thrust::host_vector<float3> result(vertices.size());
-	for (int i = 0; i < vertices.size(); i++)
-	{
-
-		result[i] = vertices[i].getCoordinatesFloat3();
-	}
-	return result;
 }
 void Mesh::writeVerticesToFile(std::unique_ptr<std::vector<Vertex>>& vertices, std::string fileName)
 {

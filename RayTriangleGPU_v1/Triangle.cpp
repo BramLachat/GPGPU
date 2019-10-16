@@ -20,10 +20,6 @@ int Triangle::getIndexOfVertexInMesh(int index)
 {
 	return vertexIndexes[index];
 }
-int3 Triangle::getIndexOfVerticesInMesh()
-{
-	return make_int3(vertexIndexes[0], vertexIndexes[1], vertexIndexes[2]);
-}
 void Triangle::clear()
 {
 	vertexIndexes[0] = -1;vertexIndexes[1] = -1;vertexIndexes[2] = -1;
