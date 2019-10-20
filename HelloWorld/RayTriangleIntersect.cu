@@ -6,6 +6,7 @@
 
 #include <math.h>
 #include <iostream>
+#include <cuda_runtime.h>
 #include <device_launch_parameters.h>
 
 #include "RayTriangleIntersect.cuh"
@@ -460,33 +461,41 @@ namespace Intersection {
 
 	//moeten de laatste 2 parameters pointers zijn?
 	__global__ void intersect_triangleGPU(float3* origins, float dir[3],
-		int3* triangles, float3* vertices, int numberOfCalculations, int numberOfTriangles, int* intersectionsPerThread, float3* outsideVertices) //hier bepaalde waarden nog eens uitprinten voor eenvoudig voorbeeld om te kijken of wel degelijk gebeurt wat je verwacht
+		int3* triangles, float3* vertices, long long int numberOfCalculations, int numberOfTriangles, int* intersectionsPerThread, float3* outsideVertices, bool* threadResult)
 	{
-		int tid = threadIdx.x + blockIdx.x * blockDim.x;
+		long long int tid = threadIdx.x + blockIdx.x * blockDim.x;
 		if (tid < numberOfCalculations)
 		{
-			float orig[3] = { origins[tid].x, origins[tid].y, origins[tid].z };
-			int numberOfIntersections = 0;
-			for (int i = 0; i < numberOfTriangles; i++)
+			int vertexIndex = tid / numberOfTriangles;
+			float orig[3] = { origins[vertexIndex].x, origins[vertexIndex].y, origins[vertexIndex].z };
+
+			int index = tid % numberOfTriangles;
+			float vert0[3] = { vertices[triangles[index].x].x, vertices[triangles[index].x].y, vertices[triangles[index].x].z };
+			float vert1[3] = { vertices[triangles[index].y].x, vertices[triangles[index].y].y, vertices[triangles[index].y].z };
+			float vert2[3] = { vertices[triangles[index].z].x, vertices[triangles[index].z].y, vertices[triangles[index].z].z };
+			float t, u, v;
+			if (intersect_triangle3(orig, dir, vert0, vert1, vert2, &t, &u, &v) == 1)
 			{
-				float vert0[3] = { vertices[triangles[i].x].x, vertices[triangles[i].x].y, vertices[triangles[i].x].z };
-				float vert1[3] = { vertices[triangles[i].y].x, vertices[triangles[i].y].y, vertices[triangles[i].y].z };
-				float vert2[3] = { vertices[triangles[i].z].x, vertices[triangles[i].z].y, vertices[triangles[i].z].z };
-				float t, u, v;
-				if (intersect_triangle3(orig, dir, vert0, vert1, vert2, &t, &u, &v) == 1)
-				{
-					numberOfIntersections++;
-				}
+				threadResult[tid] = true;
+				//printf("%d : 1, \n", tid);
 			}
-			//printf("numberOfIntersections = %d\n", numberOfIntersections);
-			intersectionsPerThread[tid] = numberOfIntersections;
-			if (numberOfIntersections % 2 == 0)
+			__syncthreads();
+			if (index == 0) 
 			{
-				outsideVertices[tid].x = orig[0];
-				outsideVertices[tid].y = orig[1];
-				outsideVertices[tid].z = orig[2];
+				int numberOfIntersections = 0;
+				for (int i = 0; i < numberOfTriangles; i++)
+				{
+					//printf("vertexIndex + i : %d \n", (vertexIndex + i));
+					if (threadResult[tid + i]) numberOfIntersections++;
+				}
+				intersectionsPerThread[vertexIndex] = numberOfIntersections;
+				if (numberOfIntersections % 2 == 0)
+				{
+					outsideVertices[vertexIndex].x = orig[0];
+					outsideVertices[vertexIndex].y = orig[1];
+					outsideVertices[vertexIndex].z = orig[2];
+				}
 			}
 		}
 	}
-
 }
