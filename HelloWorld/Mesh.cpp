@@ -262,7 +262,10 @@ void Mesh::writeTrianglesToFile(std::unique_ptr<std::vector<Triangle>>& triangle
 }
 int3* Mesh::getInt3ArrayTriangles()
 {
-	int3* triangleArray = new int3[triangles.size()];
+	int3* triangleArray;
+	cudaError_t status = cudaHostAlloc((void**)& triangleArray, triangles.size() * sizeof(int3), cudaHostAllocDefault);
+	if (status != cudaSuccess) printf("Error allocating pinned host memory\n");
+	//int3* triangleArray = new int3[triangles.size()];
 	for (int i = 0 ; i < triangles.size() ; i++)
 	{
 		triangleArray[i] = triangles[i].getIndexOfVerticesInMesh();
@@ -281,7 +284,10 @@ thrust::host_vector<int3> Mesh::getTrianglesVector()
 }
 float3* Mesh::getFloat3ArrayVertices()
 {
-	float3* vertexArray = new float3[vertices.size()];
+	float3* vertexArray;
+	cudaError_t status = cudaHostAlloc((void**)& vertexArray, vertices.size() * sizeof(float3), cudaHostAllocDefault);
+	if (status != cudaSuccess) printf("Error allocating pinned host memory\n");
+	//float3* vertexArray = new float3[vertices.size()];
 	for (int i = 0; i < vertices.size(); i++)
 	{
 		vertexArray[i] = vertices[i].getCoordinatesFloat3();
