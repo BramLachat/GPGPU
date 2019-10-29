@@ -191,7 +191,7 @@ void rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::u
 	std::cout << "--- Calculating ---" << std::endl;
 	start = std::chrono::high_resolution_clock::now(); //start time measurement
 
-	int numberOfBlocks = ((int)(numberOfInsideVertices + 511 / 512));
+	int numberOfBlocks = ((int)((numberOfInsideVertices + 511) / 512));
 	Intersection::intersect_triangleGPU<<<numberOfBlocks,512>>>(cudaInsideOrigins, cudaDir, cudaOutsideTriangles, cudaOutsideVertices, numberOfInsideVertices, numberOfOutsideTriangles, cudaIntersectionsPerOrigin, cudaResultVertices);
 	cudaError_t err = cudaGetLastError();
 	handleCudaError(err);
