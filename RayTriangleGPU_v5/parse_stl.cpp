@@ -88,4 +88,40 @@ namespace stl {
 		return mesh;
 	}
 
+	std::unique_ptr<Mesh> parse_stl_with_duplicate_vertices(const std::string& stl_path) {
+		std::ifstream stl_file(stl_path.c_str(), std::ios::in | std::ios::binary);
+		if (!stl_file) {
+			std::cout << "ERROR: COULD NOT READ FILE" << std::endl;
+			assert(false);
+		}
+
+		char header_info[80] = "";
+		char n_triangles[4];
+		stl_file.read(header_info, 80);
+		stl_file.read(n_triangles, 4);
+		std::string h(header_info);
+		unsigned int* num_triangles = (unsigned int*)n_triangles;
+		std::unique_ptr<Mesh> mesh = std::make_unique<Mesh>(h, *num_triangles);
+		Triangle t;
+		Vertex v;
+		for (unsigned int i = 0; i < *num_triangles; i++) {
+			v = parse_point(stl_file); //normalvector --> wordt niet gebruikt!
+			for (int i = 0; i < 3; i++)
+			{
+				v = parse_point(stl_file);
+				mesh->addVertex(v);
+				t.addVertexIndex(mesh->getLastVertex(), i);
+			}
+			mesh->addTriangle(t);
+			t.clear();
+			char dummy[2];
+			stl_file.read(dummy, 2);
+		}
+		std::cout << "copies" << Vertex::copies << std::endl;
+		mesh->resize();
+		std::cout << "copies" << Vertex::copies << std::endl;
+		Vertex::copies = 0;
+		//mesh->schrijf();
+		return mesh;
+	}
 }
