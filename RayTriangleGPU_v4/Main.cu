@@ -108,7 +108,7 @@ void rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::u
 	int numberOfInsideVertices = innerMesh->getNumberOfVertices();
 
 	//nodig om in kernel te controleren dat aantal keer dat test wordt uitgevoerd <= is dan het aantal driehoeken
-	long long int numberOfCudaCalculations = numberOfInsideVertices * numberOfOutsideTriangles;
+	int numberOfCudaCalculations = numberOfInsideVertices * numberOfOutsideTriangles;
 
 	bool* threadResult;
 	handleCudaError(cudaMalloc((void**)& threadResult, numberOfCudaCalculations*sizeof(bool)));
@@ -179,9 +179,14 @@ void rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::u
 	std::cout << "--- Calculating ---" << std::endl;
 	start = std::chrono::high_resolution_clock::now(); //start time measurement
 
-	long int numberOfBlocks = ((int)((numberOfCudaCalculations + 255) / 256));
-	Intersection::intersect_triangleGPU<<<numberOfBlocks,255>>>(cudaInsideOrigins, cudaDir, cudaOutsideTriangles, cudaOutsideVertices, numberOfCudaCalculations, numberOfOutsideTriangles, d_intersectionsPerThread, d_resultVertices, threadResult);
+	int numberOfBlocks = ((int)((numberOfCudaCalculations + 255) / 256));
+	Intersection::intersect_triangleGPU<<<numberOfBlocks,256>>>(cudaInsideOrigins, cudaDir, cudaOutsideTriangles, cudaOutsideVertices, numberOfCudaCalculations, numberOfOutsideTriangles, threadResult);
 	cudaError_t err = cudaGetLastError();
+	handleCudaError(err);
+
+	numberOfBlocks = ((int)((numberOfInsideVertices + 255) / 256));
+	Intersection::calculateNumberOfIntersections<<<numberOfBlocks,256>>>(cudaInsideOrigins, d_intersectionsPerThread, d_resultVertices, threadResult, numberOfInsideVertices, numberOfOutsideTriangles);
+	err = cudaGetLastError();
 	handleCudaError(err);
 
 	std::vector<int> h_intersectionsPerThread(intersectionsPerThread.size());

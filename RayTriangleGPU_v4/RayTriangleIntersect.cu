@@ -461,9 +461,9 @@ namespace Intersection {
 
 	//moeten de laatste 2 parameters pointers zijn?
 	__global__ void intersect_triangleGPU(float3* origins, float dir[3],
-		int3* triangles, float3* vertices, long long int numberOfCalculations, int numberOfTriangles, int* intersectionsPerThread, float3* outsideVertices, bool* threadResult)
+		int3* triangles, float3* vertices, int numberOfCalculations, int numberOfTriangles, bool* threadResult)
 	{
-		long long int tid = threadIdx.x + blockIdx.x * blockDim.x;
+		int tid = threadIdx.x + blockIdx.x * blockDim.x;
 		if (tid < numberOfCalculations)
 		{
 			int vertexIndex = tid / numberOfTriangles;
@@ -479,7 +479,7 @@ namespace Intersection {
 				threadResult[tid] = true;
 				//printf("%d : 1, \n", tid);
 			}
-			__syncthreads();
+			/*__syncthreads();
 			if (index == 0) 
 			{
 				int numberOfIntersections = 0;
@@ -495,6 +495,27 @@ namespace Intersection {
 					outsideVertices[vertexIndex].y = orig[1];
 					outsideVertices[vertexIndex].z = orig[2];
 				}
+			}*/
+		}
+	}
+
+	__global__ void calculateNumberOfIntersections(float3* origins, int* intersectionsPerOrigin, float3* resultVertices, bool* threadResult, int numberOfOrigins, int numberOfTriangles)
+	{
+		int tid = threadIdx.x + blockIdx.x * blockDim.x;//aantal threads nodig = aantal origins
+		if (tid < numberOfOrigins) {
+			float orig[3] = { origins[tid].x, origins[tid].y, origins[tid].z };
+			int numberOfIntersections = 0;
+			tid = tid * numberOfTriangles;
+			for (int i = 0; i < numberOfTriangles; i++) {
+				if (threadResult[tid + i]) numberOfIntersections++;
+			}
+			tid = tid / numberOfTriangles;
+			intersectionsPerOrigin[tid] = numberOfIntersections;
+			if (numberOfIntersections % 2 == 0)
+			{
+				resultVertices[tid].x = orig[0];
+				resultVertices[tid].y = orig[1];
+				resultVertices[tid].z = orig[2];
 			}
 		}
 	}
