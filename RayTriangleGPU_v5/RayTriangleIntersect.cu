@@ -467,8 +467,8 @@ namespace Intersection {
 		float orig[3] = { origins[blockIdx.x].x, origins[blockIdx.x].y, origins[blockIdx.x].z };
 
 		__shared__ int intersectionsPerBlock[128];	//!!!Threads per block moet een macht van 2 zijn!!!
-													//zoniet krijg je problemen met lijn 494
-		intersectionsPerBlock[threadidx] = 0;
+													//zoniet krijg je problemen met lijn 494 (i /= 2)
+		int numberOfIntersections = 0;
 
 		while (threadidx < numberOfTriangles) {
 			float vert0[3] = { vertices[triangles[threadidx].x].x, vertices[triangles[threadidx].x].y, vertices[triangles[threadidx].x].z };
@@ -477,12 +477,13 @@ namespace Intersection {
 			float t, u, v;
 			if (intersect_triangle3(orig, dir, vert0, vert1, vert2, &t, &u, &v) == 1)
 			{
-				intersectionsPerBlock[threadIdx.x] += 1;
+				numberOfIntersections += 1;
 				//printf("blockIdx.x, threadIdx.x = %d, %d : %d \n", blockIdx.x, threadIdx.x, intersectionsPerBlock[threadidx]);
 			}
 			threadidx += 128;
 		}
 		threadidx = threadIdx.x;
+		intersectionsPerBlock[threadidx] = numberOfIntersections;
 		__syncthreads();
 		int i = blockDim.x / 2;
 		while (i != 0) {
