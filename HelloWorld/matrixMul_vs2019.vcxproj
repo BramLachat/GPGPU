@@ -89,6 +89,7 @@
     <ClCompile>
       <Optimization>MaxSpeed</Optimization>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <OpenMPSupport Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</OpenMPSupport>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>false</GenerateDebugInformation>
