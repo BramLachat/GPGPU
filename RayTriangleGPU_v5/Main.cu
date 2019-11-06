@@ -12,6 +12,7 @@
 
 void rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::unique_ptr<Mesh>& outerMesh);
 void handleCudaError(cudaError_t cudaERR);
+__global__ void startGPU();
 
 int main(int argc, char* argv[]) {
 	std::string stl_file_inside;
@@ -99,9 +100,16 @@ int main(int argc, char* argv[]) {
 
 void rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::unique_ptr<Mesh>& outerMesh)
 {
+	auto start = std::chrono::high_resolution_clock::now(); //start time measurement
+	startGPU<<<1,1>>>();
+	cudaDeviceSynchronize();
+	auto end = std::chrono::high_resolution_clock::now(); //stop time measurement
+	auto transferDuration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+	std::cout << "\t\t\tStartup time GPU = " << transferDuration << "ms" << std::endl;
+
 	std::cout << "\t\t\tCalculating intersections! (GPU)" << std::endl;
 	std::cout << "--- Data Transfer ---" << std::endl;
-	auto start = std::chrono::high_resolution_clock::now(); //start time measurement
+	start = std::chrono::high_resolution_clock::now(); //start time measurement
 
 	bool inside = true;
 	int numberOfOutsideTriangles = outerMesh->getNumberOfTriangles();
@@ -178,8 +186,8 @@ void rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::u
 	int totalIntersections = 0;
 
 	std::cout << "--- End Data Transfer ---" << std::endl;
-	auto end = std::chrono::high_resolution_clock::now(); //stop time measurement
-	auto transferDuration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+	end = std::chrono::high_resolution_clock::now(); //stop time measurement
+	transferDuration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
 	std::cout << "\t\t\tTime Data Transfer = " << transferDuration << "ms" << std::endl;
 
 	std::cout << "--- Calculating ---" << std::endl;
@@ -244,4 +252,8 @@ void handleCudaError(cudaError_t cudaERR) {
 	if (cudaERR != cudaSuccess) {
 		printf("CUDA ERROR : %s\n", cudaGetErrorString(cudaERR));
 	}
+}
+
+__global__ void startGPU() {
+	printf("GPU ready!\n");
 }
