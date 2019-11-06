@@ -461,31 +461,48 @@ namespace Intersection {
 
 	//moeten de laatste 2 parameters pointers zijn?
 	__global__ void intersect_triangleGPU(float3* origins, float dir[3],
-		int3* triangles, float3* vertices, int numberOfOrigins, int numberOfTriangles, int* intersectionsPerOrigin, float3* outsideVertices)
+		int3* triangles, float3* vertices, int numberOfTriangles, int* intersectionsPerOrigin, float3* outsideVertices)
 	{
-		int tid = threadIdx.x + blockIdx.x * blockDim.x;
-		if (tid < numberOfOrigins)
-		{
-			float orig[3] = { origins[tid].x, origins[tid].y, origins[tid].z };
-			int numberOfIntersections = 0;
-			for (int i = 0; i < numberOfTriangles; i++)
+		int threadidx = threadIdx.x;
+		float orig[3] = { origins[blockIdx.x].x, origins[blockIdx.x].y, origins[blockIdx.x].z };
+
+		__shared__ int intersectionsPerBlock[128];	//!!!Threads per block moet een macht van 2 zijn!!!
+													//zoniet krijg je problemen met lijn 494 (i /= 2)
+		int numberOfIntersections = 0;
+
+		while (threadidx < numberOfTriangles) {
+			float vert0[3] = { vertices[triangles[threadidx].x].x, vertices[triangles[threadidx].x].y, vertices[triangles[threadidx].x].z };
+			float vert1[3] = { vertices[triangles[threadidx].y].x, vertices[triangles[threadidx].y].y, vertices[triangles[threadidx].y].z };
+			float vert2[3] = { vertices[triangles[threadidx].z].x, vertices[triangles[threadidx].z].y, vertices[triangles[threadidx].z].z };
+			float t, u, v;
+			if (intersect_triangle3(orig, dir, vert0, vert1, vert2, &t, &u, &v) == 1)
 			{
-				float vert0[3] = { vertices[triangles[i].x].x, vertices[triangles[i].x].y, vertices[triangles[i].x].z };
-				float vert1[3] = { vertices[triangles[i].y].x, vertices[triangles[i].y].y, vertices[triangles[i].y].z };
-				float vert2[3] = { vertices[triangles[i].z].x, vertices[triangles[i].z].y, vertices[triangles[i].z].z };
-				float t, u, v;
-				if (intersect_triangle3(orig, dir, vert0, vert1, vert2, &t, &u, &v) == 1)
-				{
-					numberOfIntersections++;
-				}
+				numberOfIntersections += 1;
+				//printf("blockIdx.x, threadIdx.x = %d, %d : %d \n", blockIdx.x, threadIdx.x, intersectionsPerBlock[threadidx]);
 			}
-			//printf("numberOfIntersections = %d\n", numberOfIntersections);
-			intersectionsPerOrigin[tid] = numberOfIntersections;
-			if (numberOfIntersections % 2 == 0)
+			threadidx += 128;
+		}
+		threadidx = threadIdx.x;
+		intersectionsPerBlock[threadidx] = numberOfIntersections;
+		__syncthreads();
+		int i = blockDim.x / 2;
+		while (i != 0) {
+			if (threadidx < i) {
+				intersectionsPerBlock[threadidx] += intersectionsPerBlock[threadidx + i];
+				//if (blockIdx.x == 0)printf("intersectionsPerBlock[%d] = %d \n", threadidx, intersectionsPerBlock[threadidx]);
+			}
+			__syncthreads();
+			i /= 2;
+		}
+		if (threadidx == 0) {
+			//printf("blockIdx.x = %d,  intersectionsPerBlock: %d \n", blockIdx.x, intersectionsPerBlock[0]);
+			intersectionsPerOrigin[blockIdx.x] = intersectionsPerBlock[0];
+			//printf("%d", intersectionsPerOrigin[blockIdx.x]);
+			if (intersectionsPerBlock[0] % 2 == 0)
 			{
-				outsideVertices[tid].x = orig[0];
-				outsideVertices[tid].y = orig[1];
-				outsideVertices[tid].z = orig[2];
+				outsideVertices[blockIdx.x].x = orig[0];
+				outsideVertices[blockIdx.x].y = orig[1];
+				outsideVertices[blockIdx.x].z = orig[2];
 			}
 		}
 	}

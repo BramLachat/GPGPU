@@ -131,10 +131,6 @@ void rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::u
 	float3* cudaInsideOrigins;
 	int sizeInsideVertices = numberOfInsideVertices * sizeof(float3);
 	//handleCudaError(cudaMallocManaged((void**)& cudaInsideOrigins, sizeInsideVertices));
-	//memcpy(cudaInsideOrigins, insideOrigins, sizeInsideVertices);  waarschijnlijk moet ik zoiets ook nog doen bij cudaHostAlloc???
-	handleCudaError(cudaMalloc((void**)& cudaInsideOrigins, sizeInsideVertices));
-	handleCudaError(cudaMemcpy(cudaInsideOrigins, insideOrigins, sizeInsideVertices, cudaMemcpyHostToDevice));
-	//handleCudaError(cudaHostAlloc((void**)& insideOrigins, sizeInsideVertices, cudaHostAllocMapped));
 	//memcpy(cudaInsideOrigins, insideOrigins, sizeInsideVertices);
 	handleCudaError(cudaMalloc((void**)& cudaInsideOrigins, sizeInsideVertices));
 	handleCudaError(cudaMemcpy(cudaInsideOrigins, insideOrigins, sizeInsideVertices, cudaMemcpyHostToDevice));

@@ -6,7 +6,6 @@
 #include <fstream>
 #include <chrono>
 
-#include "omp.h"
 #include "Mesh.h"
 #include "RayTriangleIntersect.cuh"
 #include "TriangleTriangleIntersect.h"
@@ -62,24 +61,7 @@ int Mesh::findDuplicate(const Vertex& v)
 }
 void Mesh::rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh)
 {
-	std::vector<Vertex> outermesh_vertices = vertices; //Nodig voor OpenMP
-	std::vector<Triangle> outermesh_triangles = triangles; //Nodig voor OpenMP
-
-	int aantal_threads = 1;
-	std::cout << "Choose the number of threads!" << std::endl;
-	std::cin >> aantal_threads;
-	omp_set_num_threads(aantal_threads);
-	std::cout << "aantal threads: " << omp_get_num_threads() << std::endl;
-
 	auto start = std::chrono::high_resolution_clock::now(); //start time measurement
-
-	std::unique_ptr<std::vector<Vertex>> outsideVertices = std::make_unique<std::vector<Vertex>>(innerMesh->getNumberOfVertices());
-	bool inside = true;
-	std::unique_ptr<std::vector<int>> totalIntersections = std::make_unique<std::vector<int>>(aantal_threads);
-	int totaalAantalIntersecties = 0;
-
-#pragma omp parallel shared(innerMesh,outermesh_vertices,outermesh_triangles,totalIntersections,outsideVertices)
-	{
 
 	//std::unique_ptr<float[]> orig = std::make_unique<float[]>(3); //smart pointer
 	//std::vector<float> orig;
@@ -94,14 +76,16 @@ void Mesh::rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh)
 	float* vert3;
 	float* orig;
 	//float dirPerPoint[3];
-	int tid = omp_get_thread_num();
-	totalIntersections->at(tid) = 0;
 
 	Vertex* innerVertex;
 
+	std::unique_ptr<std::vector<Vertex>> outsideVertices = std::make_unique<std::vector<Vertex>>();
+
+	bool inside = true;
+	int totalIntersections = 0;
+
 	std::cout << "\t\t\tCalculating intersections! (CPU)" << std::endl;
 
-#pragma omp for schedule(static)
 	for(int j = 0 ; j < innerMesh->getNumberOfVertices() ; j++)
 	{
 		innerVertex = &(innerMesh->vertices.at(j));
@@ -131,28 +115,21 @@ void Mesh::rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh)
 				//std::cout << "0, ";
 			}
 		}
-		totalIntersections->at(tid) += numberOfIntersections;
+		totalIntersections += numberOfIntersections;
 		//std::cout << "aantal intersecties = " << numberOfIntersections << std::endl;
 		if (numberOfIntersections % 2 == 0)
 		{
 			inside = false;
-			outsideVertices->at(j) = *innerVertex;
+			outsideVertices->push_back(*innerVertex);
 		}
-	}
-	if (tid == 0) {
-		for (int i = 1; i < aantal_threads; i++) {
-			totalIntersections->at(0) += totalIntersections->at(i);
-		}
-		totaalAantalIntersecties = totalIntersections->at(0);
-	}
-	delete t; delete u; delete v;
 	}
 
 	auto end = std::chrono::high_resolution_clock::now(); //stop time measurement
 	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
 	std::cout << "\t\t\tTime CPU = " << duration << "ms" << std::endl;
 
-	std::cout << "totaal intersecties = " << totaalAantalIntersecties << std::endl;
+	std::cout << "totaal intersecties = " << totalIntersections << std::endl;
+	delete t; delete u; delete v;
 	if (inside) { std::cout << "INSIDE" << std::endl; }
 	else { std::cout << "OUTSIDE" << std::endl; }
 
@@ -262,8 +239,8 @@ void Mesh::addVertexIndex(const std::string& s, int index)
 void Mesh::writeTrianglesToFile(std::unique_ptr<std::vector<Triangle>>& triangles, std::vector<Vertex>* vertices, std::string fileName)
 {
 	std::vector<Triangle>::iterator itr;
-	std::string path = "C:\\Users\\hla\\Documents\\Masterproef\\GPGPU\\Output\\" + fileName;
-	//std::string path = "D:\\Masterproef\\GPGPU\\Output\\" + fileName;
+	//std::string path = "C:\\Users\\hla\\Documents\\Masterproef\\GPGPU\\Output\\" + fileName;
+	std::string path = "D:\\Masterproef\\GPGPU\\Output\\" + fileName;
 	std::ofstream ofs(path);
 	ofs << "solid IntersectingTriangles" << std::endl;
 	for (itr = triangles->begin(); itr != triangles->end(); ++itr)
@@ -285,10 +262,7 @@ void Mesh::writeTrianglesToFile(std::unique_ptr<std::vector<Triangle>>& triangle
 }
 int3* Mesh::getInt3ArrayTriangles()
 {
-	int3* triangleArray;
-	cudaError_t status = cudaHostAlloc((void**)& triangleArray, triangles.size() * sizeof(int3), cudaHostAllocDefault);
-	if (status != cudaSuccess) printf("Error allocating pinned host memory\n");
-	//int3* triangleArray = new int3[triangles.size()];
+	int3* triangleArray = new int3[triangles.size()];
 	for (int i = 0 ; i < triangles.size() ; i++)
 	{
 		triangleArray[i] = triangles[i].getIndexOfVerticesInMesh();
@@ -307,10 +281,7 @@ thrust::host_vector<int3> Mesh::getTrianglesVector()
 }
 float3* Mesh::getFloat3ArrayVertices()
 {
-	float3* vertexArray;
-	cudaError_t status = cudaHostAlloc((void**)& vertexArray, vertices.size() * sizeof(float3), cudaHostAllocDefault);
-	if (status != cudaSuccess) printf("Error allocating pinned host memory\n");
-	//float3* vertexArray = new float3[vertices.size()];
+	float3* vertexArray = new float3[vertices.size()];
 	for (int i = 0; i < vertices.size(); i++)
 	{
 		vertexArray[i] = vertices[i].getCoordinatesFloat3();
@@ -330,29 +301,27 @@ thrust::host_vector<float3> Mesh::getVerticesVector()
 void Mesh::writeVerticesToFile(std::unique_ptr<std::vector<Vertex>>& vertices, std::string fileName)
 {
 	std::vector<Vertex>::iterator itr;
-	std::string path = "C:\\Users\\hla\\Documents\\Masterproef\\GPGPU\\Output\\" + fileName;
-	//std::string path = "D:\\Masterproef\\GPGPU\\Output\\" + fileName;
+	//std::string path = "C:\\Users\\hla\\Documents\\Masterproef\\GPGPU\\Output\\" + fileName;
+	std::string path = "D:\\Masterproef\\GPGPU\\Output\\" + fileName;
 	std::ofstream ofs(path);
-	ofs << "solid OutsideVertices" << std::endl;
+	ofs << "solid IntersectingTriangles" << std::endl;
 	float* vert;
 	for (itr = vertices->begin(); itr != vertices->end(); ++itr)
 	{
+		ofs << "  facet normal  0.0  0.0  0.0" << std::endl;
+		ofs << "    outer loop" << std::endl;
 		vert = itr->getCoordinates();
-		if(vert[0] + vert[1] + vert[2] != 0){
-			ofs << "  facet normal  0.0  0.0  0.0" << std::endl;
-			ofs << "    outer loop" << std::endl;
-			ofs << "      vertex  " << vert[0] << "  "
-				<< vert[1] << "  "
-				<< vert[2] << std::endl;
-			ofs << "      vertex  " << (vert[0]-0.1) << "  "
-				<< (vert[1]-0.1) << "  "
-				<< (vert[2]-0.1) << std::endl;
-			ofs << "      vertex  " << (vert[0] + 0.1) << "  "
-				<< (vert[1] + 0.1) << "  "
-				<< (vert[2] - 0.1) << std::endl;
-			ofs << "    endloop" << std::endl;
-			ofs << "  endfacet" << std::endl;
-		}
+		ofs << "      vertex  " << vert[0] << "  "
+			<< vert[1] << "  "
+			<< vert[2] << std::endl;
+		ofs << "      vertex  " << (vert[0]-0.1) << "  "
+			<< (vert[1]-0.1) << "  "
+			<< (vert[2]-0.1) << std::endl;
+		ofs << "      vertex  " << (vert[0] + 0.1) << "  "
+			<< (vert[1] + 0.1) << "  "
+			<< (vert[2] - 0.1) << std::endl;
+		ofs << "    endloop" << std::endl;
+		ofs << "  endfacet" << std::endl;
 	}
 	ofs << "endsolid vcg" << std::endl;
 }

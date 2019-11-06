@@ -131,13 +131,11 @@ void rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::u
 	float3* cudaInsideOrigins;
 	int sizeInsideVertices = numberOfInsideVertices * sizeof(float3);
 	//handleCudaError(cudaMallocManaged((void**)& cudaInsideOrigins, sizeInsideVertices));
-	//memcpy(cudaInsideOrigins, insideOrigins, sizeInsideVertices);  waarschijnlijk moet ik zoiets ook nog doen bij cudaHostAlloc???
-	handleCudaError(cudaMalloc((void**)& cudaInsideOrigins, sizeInsideVertices));
-	handleCudaError(cudaMemcpy(cudaInsideOrigins, insideOrigins, sizeInsideVertices, cudaMemcpyHostToDevice));
-	//handleCudaError(cudaHostAlloc((void**)& insideOrigins, sizeInsideVertices, cudaHostAllocMapped));
 	//memcpy(cudaInsideOrigins, insideOrigins, sizeInsideVertices);
 	handleCudaError(cudaMalloc((void**)& cudaInsideOrigins, sizeInsideVertices));
 	handleCudaError(cudaMemcpy(cudaInsideOrigins, insideOrigins, sizeInsideVertices, cudaMemcpyHostToDevice));
+	//handleCudaError(cudaHostAlloc((void**)& insideOrigins, sizeInsideVertices, cudaHostAllocMapped));
+	//insideOrigins = innerMesh->getFloat3ArrayVertices();
 	
 	float* cudaDir;
 	//handleCudaError(cudaMallocManaged((void**)& cudaDir, 3*sizeof(float)));
@@ -195,8 +193,8 @@ void rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::u
 	std::cout << "--- Calculating ---" << std::endl;
 	start = std::chrono::high_resolution_clock::now(); //start time measurement
 
-	int numberOfBlocks = ((int)((numberOfInsideVertices + 511) / 512));
-	Intersection::intersect_triangleGPU<<<numberOfBlocks,512>>>(cudaInsideOrigins, cudaDir, cudaOutsideTriangles, cudaOutsideVertices, numberOfInsideVertices, numberOfOutsideTriangles, cudaIntersectionsPerOrigin, cudaResultVertices);
+	int numberOfBlocks = numberOfInsideVertices;
+	Intersection::intersect_triangleGPU<<<numberOfBlocks,128>>>(cudaInsideOrigins, cudaDir, cudaOutsideTriangles, cudaOutsideVertices, numberOfOutsideTriangles, cudaIntersectionsPerOrigin, cudaResultVertices);
 	cudaError_t err = cudaGetLastError();
 	handleCudaError(err);
 
@@ -239,12 +237,9 @@ void rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::u
 	cudaFree(cudaOutsideVertices);
 	cudaFree(cudaIntersectionsPerOrigin);
 	cudaFree(cudaResultVertices);
-	cudaFreeHost(insideOrigins);
-	cudaFreeHost(outsideTriangles);
-	cudaFreeHost(outsideVertices);
-	//delete insideOrigins;
-	//delete outsideTriangles;
-	//delete outsideVertices;
+	delete insideOrigins;
+	delete outsideTriangles;
+	delete outsideVertices;
 	delete intersectionsPerOrigin;
 	delete resultVertices;
 
