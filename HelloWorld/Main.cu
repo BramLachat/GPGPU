@@ -116,15 +116,14 @@ void rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::u
 	thrust::device_ptr<float3> d_cudaInsideOrigins = cudaInsideOrigins.data();
 	float3* deviceInsideOrigins = thrust::raw_pointer_cast(d_cudaInsideOrigins);*/
 
-	float3* insideOrigins;
-	//float3* cudaInsideOrigins;
+	float3* insideOrigins = innerMesh->getFloat3ArrayVertices();
+	float3* cudaInsideOrigins;
 	int sizeInsideVertices = numberOfInsideVertices * sizeof(float3);
 	//handleCudaError(cudaMallocManaged((void**)& cudaInsideOrigins, sizeInsideVertices));
-	//memcpy(cudaInsideOrigins, insideOrigins, sizeInsideVertices);
-	//handleCudaError(cudaMalloc((void**)& cudaInsideOrigins, sizeInsideVertices));
-	//handleCudaError(cudaMemcpy(cudaInsideOrigins, insideOrigins, sizeInsideVertices, cudaMemcpyHostToDevice));
-	handleCudaError(cudaHostAlloc((void**)& insideOrigins, sizeInsideVertices, cudaHostAllocMapped));
-	insideOrigins = innerMesh->getFloat3ArrayVertices();
+	//memcpy(cudaInsideOrigins, insideOrigins, sizeInsideVertices);  waarschijnlijk moet ik zoiets ook nog doen bij cudaHostAlloc???
+	handleCudaError(cudaMalloc((void**)& cudaInsideOrigins, sizeInsideVertices));
+	handleCudaError(cudaMemcpy(cudaInsideOrigins, insideOrigins, sizeInsideVertices, cudaMemcpyHostToDevice));
+	//handleCudaError(cudaHostAlloc((void**)& insideOrigins, sizeInsideVertices, cudaHostAllocMapped));
 	
 	float* cudaDir;
 	//handleCudaError(cudaMallocManaged((void**)& cudaDir, 3*sizeof(float)));
@@ -177,7 +176,7 @@ void rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::u
 	start = std::chrono::high_resolution_clock::now(); //start time measurement
 
 	int numberOfBlocks = ((int)((numberOfInsideVertices + 191) / 192));
-	Intersection::intersect_triangleGPU<<<numberOfBlocks,192>>>(insideOrigins, cudaDir, cudaOutsideTriangles, cudaOutsideVertices, numberOfCudaCalculations, numberOfOutsideTriangles, d_intersectionsPerThread, d_resultVertices);
+	Intersection::intersect_triangleGPU<<<numberOfBlocks,192>>>(cudaInsideOrigins, cudaDir, cudaOutsideTriangles, cudaOutsideVertices, numberOfCudaCalculations, numberOfOutsideTriangles, d_intersectionsPerThread, d_resultVertices);
 	cudaError_t err = cudaGetLastError();
 	handleCudaError(err);
 
