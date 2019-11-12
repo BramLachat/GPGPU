@@ -5,9 +5,9 @@
   - CUDA Toolkit: [Download CUDA Toolkit 10.1](https://developer.nvidia.com/cuda-downloads)
   
 ### 2) Run HelloWorld:
-  - Open in de map 'HelloWorld' het bestand: 'STL_Reader.sln'
+  - Open in de map 'HelloWorld' het bestand: `STL_Reader.sln`
   - Visual Studio: Rebuild Solution in Release mode
-  - Ga naar de map `HelloWorld\bin\win64\Release` en open het bestand STL_Reader.exe
+  - Ga naar de map `HelloWorld\bin\win64\Release` en open het bestand `STL_Reader.exe`
   
 ### 3) Input (Enkel meshes in binair formaat worden ingelezen!):
   1) Het pad van de binnenste mesh wordt gevraagd. Deze zijn te vinden in de map 'Meshes'
