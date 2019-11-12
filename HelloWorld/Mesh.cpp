@@ -9,7 +9,7 @@
 #include "omp.h"
 #include "Mesh.h"
 #include "RayTriangleIntersect.cuh"
-#include "TriangleTriangleIntersect.h"
+#include "TriangleTriangleIntersect.cuh"
 
 
 Mesh::Mesh(std::string n, unsigned int size)
@@ -177,6 +177,7 @@ void Mesh::triangleTriangleIntersect(std::unique_ptr<Mesh>& innerMesh)
 	std::unique_ptr<std::vector<Triangle>> intersectingTriangles2 = std::make_unique<std::vector<Triangle>>();
 
 	bool inside = true;
+	int totalIntersections = 0;
 
 	std::cout << "\t\t\tCalculating intersecting triangles! (CPU)" << std::endl;
 
@@ -195,7 +196,7 @@ void Mesh::triangleTriangleIntersect(std::unique_ptr<Mesh>& innerMesh)
 			vert2_1 = vertices.at(t2->getIndexOfVertexInMesh(0)).getCoordinates();
 			vert2_2 = vertices.at(t2->getIndexOfVertexInMesh(1)).getCoordinates();
 			vert2_3 = vertices.at(t2->getIndexOfVertexInMesh(2)).getCoordinates();
-			if (Intersection::NoDivTriTriIsect(vert1_1, vert1_2, vert1_3, vert2_1, vert2_2, vert2_3) == 1)
+			if (NoDivTriTriIsect(vert1_1, vert1_2, vert1_3, vert2_1, vert2_2, vert2_3) == 1)
 			{
 				//list printed with intersecting triangles
 				intersectingTriangles1->push_back(*t1);
@@ -204,12 +205,14 @@ void Mesh::triangleTriangleIntersect(std::unique_ptr<Mesh>& innerMesh)
 				numberOfIntersections++;
 			}
 		}
+		totalIntersections += numberOfIntersections;
 		//std::cout << "aantal intersecties = " << numberOfIntersections << std::endl;
-		if (numberOfIntersections != 0)
-		{
-			inside = false;
-		}
 	}
+	if (totalIntersections != 0)
+	{
+		inside = false;
+	}
+	std::cout << "Aantal intersecties: " << totalIntersections << std::endl;
 	if (inside) { std::cout << "SNIJDEN NIET" << std::endl; }
 	else { std::cout << "SNIJDEN WEL" << std::endl; }
 

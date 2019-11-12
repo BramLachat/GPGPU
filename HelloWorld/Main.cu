@@ -9,8 +9,10 @@
 #include "Mesh.h"
 #include "parse_stl.h"
 #include "RayTriangleIntersect.cuh"
+#include "TriangleTriangleIntersect.cuh"
 
 void rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::unique_ptr<Mesh>& outerMesh);
+void TriangleTriangleIntersect(std::unique_ptr<Mesh>& innerMesh, std::unique_ptr<Mesh>& outerMesh);
 void handleCudaError(cudaError_t cudaERR);
 __global__ void startGPU();
 
@@ -79,13 +81,19 @@ int main(int argc, char* argv[]) {
 		{
 			//2 opties om unique ptr mee te geven als argument aan een functie:
 			//https://stackoverflow.com/questions/30905487/how-can-i-pass-stdunique-ptr-into-a-function
-			triangleMesh_Outside->rayTriangleIntersect(direction, triangleMesh_Inside);
+			triangleMesh_Outside->rayTriangleIntersect(direction, triangleMesh_Inside); // CPU version
 		}
-		rayTriangleIntersect(direction, triangleMesh_Inside, triangleMesh_Outside);
+		rayTriangleIntersect(direction, triangleMesh_Inside, triangleMesh_Outside); // GPU version
 	}
 	else
 	{
-		triangleMesh_Outside->triangleTriangleIntersect(triangleMesh_Inside);
+		std::cout << "CPU? (yes = 1, no = 0)" << std::endl;
+		std::cin >> CPU;
+		if (CPU == 1)
+		{
+			triangleMesh_Outside->triangleTriangleIntersect(triangleMesh_Inside); // CPU version
+		}
+		TriangleTriangleIntersect(triangleMesh_Inside, triangleMesh_Outside); // GPU version
 	}	
 	
 	//auto end = std::chrono::high_resolution_clock::now(); //stop time measurement
@@ -132,10 +140,6 @@ void rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::u
 	int sizeInsideVertices = numberOfInsideVertices * sizeof(float3);
 	//handleCudaError(cudaMallocManaged((void**)& cudaInsideOrigins, sizeInsideVertices));
 	//memcpy(cudaInsideOrigins, insideOrigins, sizeInsideVertices);  waarschijnlijk moet ik zoiets ook nog doen bij cudaHostAlloc???
-	handleCudaError(cudaMalloc((void**)& cudaInsideOrigins, sizeInsideVertices));
-	handleCudaError(cudaMemcpy(cudaInsideOrigins, insideOrigins, sizeInsideVertices, cudaMemcpyHostToDevice));
-	//handleCudaError(cudaHostAlloc((void**)& insideOrigins, sizeInsideVertices, cudaHostAllocMapped));
-	//memcpy(cudaInsideOrigins, insideOrigins, sizeInsideVertices);
 	handleCudaError(cudaMalloc((void**)& cudaInsideOrigins, sizeInsideVertices));
 	handleCudaError(cudaMemcpy(cudaInsideOrigins, insideOrigins, sizeInsideVertices, cudaMemcpyHostToDevice));
 	
@@ -252,6 +256,105 @@ void rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::u
 	std::cout << "totaal intersecties: " << totalIntersections << std::endl;
 	if (inside) { std::cout << "INSIDE" << std::endl; }
 	else { std::cout << "OUTSIDE" << std::endl; }
+}
+
+void TriangleTriangleIntersect(std::unique_ptr<Mesh>& innerMesh, std::unique_ptr<Mesh>& outerMesh)
+{
+	auto start = std::chrono::high_resolution_clock::now(); //start time measurement
+	startGPU<<<1,1>>>();
+	cudaDeviceSynchronize();
+	auto end = std::chrono::high_resolution_clock::now(); //stop time measurement
+	auto transferDuration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+	std::cout << "\t\t\tStartup time GPU = " << transferDuration << " milliseconds" << std::endl;
+
+	std::cout << "\t\t\tCalculating intersections! (GPU)" << std::endl;
+	std::cout << "--- Data Transfer ---" << std::endl;
+	start = std::chrono::high_resolution_clock::now(); //start time measurement
+
+	bool inside = true;
+	int numberOfOutsideTriangles = outerMesh->getNumberOfTriangles();
+	int numberOfOutsideVertices = outerMesh->getNumberOfVertices();
+	int numberOfInsideTriangles = innerMesh->getNumberOfTriangles();
+	int numberOfInsideVertices = innerMesh->getNumberOfVertices();
+
+	/* Alloceren en kopiëren hoekpunten binnenste mesh naar GPU*/
+	float3* insideVertices = innerMesh->getFloat3ArrayVertices();
+	float3* cudaInsideVertices;
+	int sizeInsideVertices = numberOfInsideVertices * sizeof(float3);
+	handleCudaError(cudaMalloc((void**)&cudaInsideVertices, sizeInsideVertices));
+	handleCudaError(cudaMemcpyAsync(cudaInsideVertices, insideVertices, sizeInsideVertices, cudaMemcpyHostToDevice));
+
+	/* Alloceren en kopiëren driehoeken binnenste mesh naar GPU*/
+	int3* insideTriangles = innerMesh->getInt3ArrayTriangles();
+	int3* cudaInsideTriangles;
+	int sizeInsideTriangles = numberOfInsideTriangles * sizeof(int3);
+	handleCudaError(cudaMalloc((void**)&cudaInsideTriangles, sizeInsideTriangles));
+	handleCudaError(cudaMemcpyAsync(cudaInsideTriangles, insideTriangles, sizeInsideTriangles, cudaMemcpyHostToDevice));
+
+	/* Alloceren en kopiëren hoekpunten buitenste mesh naar GPU*/
+	float3* outsideVertices = outerMesh->getFloat3ArrayVertices();
+	float3* cudaOutsideVertices;
+	int sizeOutsideVertices = numberOfOutsideVertices * sizeof(float3);
+	handleCudaError(cudaMalloc((void**)&cudaOutsideVertices, sizeOutsideVertices));
+	handleCudaError(cudaMemcpyAsync(cudaOutsideVertices, outsideVertices, sizeOutsideVertices, cudaMemcpyHostToDevice));
+	
+	/* Alloceren en kopiëren driehoeken buitenste mesh naar GPU*/
+	int3* outsideTriangles = outerMesh->getInt3ArrayTriangles();
+	int3* cudaOutsideTriangles;
+	int sizeOutsideTriangles = numberOfOutsideTriangles * sizeof(int3);
+	handleCudaError(cudaMalloc((void**)&cudaOutsideTriangles, sizeOutsideTriangles));
+	handleCudaError(cudaMemcpyAsync(cudaOutsideTriangles, outsideTriangles, sizeOutsideTriangles, cudaMemcpyHostToDevice));
+
+	/* Alloceren van geheugen op GPU om bij te houden met hoeveel driehoeken van de buitenste mesh deze ene driehoek van de binnenste mesh snijdt*/
+	int* intersectionsPerInsideTriangle = new int[numberOfInsideTriangles];
+	int* cudaIntersectionsPerInsideTriangle;
+	handleCudaError(cudaMalloc((void**)&cudaIntersectionsPerInsideTriangle, numberOfInsideTriangles * sizeof(int)));
+
+	/* Als deze waarde > 0 ==> De binnenste mesh ligt niet volledig in de buitenste mesh*/
+	int totalIntersections = 0;
+
+	std::cout << "--- End Data Transfer ---" << std::endl;
+	end = std::chrono::high_resolution_clock::now(); //stop time measurement
+	transferDuration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+	std::cout << "\t\t\tTime Data Transfer = " << transferDuration << " milliseconds" << std::endl;
+
+	std::cout << "--- Calculating ---" << std::endl;
+	start = std::chrono::high_resolution_clock::now(); //start time measurement
+
+	/* Uitvoeren CUDA kernel*/
+	int numberOfBlocks = ((int)((numberOfInsideTriangles + 511) / 512));
+	triangle_triangle_GPU<<<numberOfBlocks,512>>>(cudaInsideTriangles, cudaInsideVertices, cudaOutsideTriangles, cudaOutsideVertices, cudaIntersectionsPerInsideTriangle, numberOfInsideTriangles, numberOfOutsideTriangles);
+	cudaError_t err = cudaGetLastError();
+	handleCudaError(err);
+
+	/* Kopiëren van de resultaten van GPU naar CPU*/
+	handleCudaError(cudaMemcpy(intersectionsPerInsideTriangle, cudaIntersectionsPerInsideTriangle, numberOfInsideTriangles * sizeof(int), cudaMemcpyDeviceToHost));
+
+	std::cout << "--- End Calculating ---" << std::endl;
+	end = std::chrono::high_resolution_clock::now(); //stop time measurement
+	auto calculatingDuration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+	std::cout << "\t\t\tTime Calculating = " << calculatingDuration << " microseconds" << std::endl;
+
+	for (int i = 0; i < numberOfInsideTriangles; i++)
+	{
+		totalIntersections += intersectionsPerInsideTriangle[i];
+	}
+	if (totalIntersections > 0) { inside = false; }
+
+	cudaFree(cudaInsideTriangles);
+	cudaFree(cudaInsideVertices);
+	cudaFree(cudaOutsideTriangles);
+	cudaFree(cudaOutsideVertices);
+	cudaFree(cudaIntersectionsPerInsideTriangle);
+	cudaFreeHost(outsideTriangles);
+	cudaFreeHost(outsideVertices);
+	cudaFreeHost(insideTriangles);
+	cudaFreeHost(insideVertices);
+	delete intersectionsPerInsideTriangle;
+
+	std::cout << "totaal intersecties: " << totalIntersections << std::endl;
+	if (inside) { std::cout << "SNIJDEN NIET" << std::endl; }
+	else { std::cout << "SNIJDEN WEL" << std::endl; }
 }
 
 void handleCudaError(cudaError_t cudaERR) {
