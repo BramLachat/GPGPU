@@ -67,5 +67,5 @@ Mesh100000-Mesh100000					(inside)
 Mesh100000-Mesh100000					(intersecting)
 Mesh100000-Mesh100000					(outside)
 
-C:\Users\hla\Documents\Masterproef\GPGPU\Meshes\Mesh10.stl
+D:\FIIW_Ma1_2019-2020\Masterproef\GPGPU\Meshes\Mesh100.stl
 D:\Masterproef\GPGPU\Meshes\Mesh100000.stl

@@ -262,7 +262,7 @@ void Mesh::addVertexIndex(const std::string& s, int index)
 void Mesh::writeTrianglesToFile(std::unique_ptr<std::vector<Triangle>>& triangles, std::vector<Vertex>* vertices, std::string fileName)
 {
 	std::vector<Triangle>::iterator itr;
-	std::string path = "C:\\Users\\hla\\Documents\\Masterproef\\GPGPU\\Output\\" + fileName;
+	std::string path = "D:\\FIIW_Ma1_2019-2020\\Masterproef\\GPGPU\\Output\\" + fileName;
 	//std::string path = "D:\\Masterproef\\GPGPU\\Output\\" + fileName;
 	std::ofstream ofs(path);
 	ofs << "solid IntersectingTriangles" << std::endl;
@@ -330,7 +330,7 @@ thrust::host_vector<float3> Mesh::getVerticesVector()
 void Mesh::writeVerticesToFile(std::unique_ptr<std::vector<Vertex>>& vertices, std::string fileName)
 {
 	std::vector<Vertex>::iterator itr;
-	std::string path = "C:\\Users\\hla\\Documents\\Masterproef\\GPGPU\\Output\\" + fileName;
+	std::string path = "../../../../Output/" + fileName;
 	//std::string path = "D:\\Masterproef\\GPGPU\\Output\\" + fileName;
 	std::ofstream ofs(path);
 	ofs << "solid OutsideVertices" << std::endl;
