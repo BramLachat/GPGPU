@@ -459,6 +459,8 @@ namespace Intersection {
 		
 	}
 
+	__device__ bool outside = false;
+
 	//moeten de laatste 2 parameters pointers zijn?
 	__global__ void intersect_triangleGPU(float3* origins, float dir[3],
 		int3* triangles, float3* vertices, int numberOfOrigins, int numberOfTriangles, int* intersectionsPerOrigin, float3* outsideVertices)
@@ -470,19 +472,25 @@ namespace Intersection {
 			int numberOfIntersections = 0;
 			for (int i = 0; i < numberOfTriangles; i++)
 			{
-				float vert0[3] = { vertices[triangles[i].x].x, vertices[triangles[i].x].y, vertices[triangles[i].x].z };
-				float vert1[3] = { vertices[triangles[i].y].x, vertices[triangles[i].y].y, vertices[triangles[i].y].z };
-				float vert2[3] = { vertices[triangles[i].z].x, vertices[triangles[i].z].y, vertices[triangles[i].z].z };
-				float t, u, v;
-				if (intersect_triangle3(orig, dir, vert0, vert1, vert2, &t, &u, &v) == 1)
-				{
-					numberOfIntersections++;
+				if (!outside) {
+					float vert0[3] = { vertices[triangles[i].x].x, vertices[triangles[i].x].y, vertices[triangles[i].x].z };
+					float vert1[3] = { vertices[triangles[i].y].x, vertices[triangles[i].y].y, vertices[triangles[i].y].z };
+					float vert2[3] = { vertices[triangles[i].z].x, vertices[triangles[i].z].y, vertices[triangles[i].z].z };
+					float t, u, v;
+					if (intersect_triangle3(orig, dir, vert0, vert1, vert2, &t, &u, &v) == 1)
+					{
+						numberOfIntersections++;
+					}
+				}
+				else {
+					return;
 				}
 			}
 			//printf("numberOfIntersections = %d\n", numberOfIntersections);
 			intersectionsPerOrigin[tid] = numberOfIntersections;
 			if (numberOfIntersections % 2 == 0)
 			{
+				outside = true;
 				outsideVertices[tid].x = orig[0];
 				outsideVertices[tid].y = orig[1];
 				outsideVertices[tid].z = orig[2];

@@ -80,9 +80,9 @@ namespace stl {
 			char dummy[2];
 			stl_file.read(dummy, 2);
 		}
-		std::cout << "copies" << Vertex::copies << std::endl;
+		//std::cout << "copies" << Vertex::copies << std::endl;
 		mesh->resize();
-		std::cout << "copies" << Vertex::copies << std::endl;
+		//std::cout << "copies" << Vertex::copies << std::endl;
 		Vertex::copies = 0;
 		//mesh->schrijf();
 		return mesh;
