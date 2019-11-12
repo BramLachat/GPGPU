@@ -25,8 +25,6 @@ int main(int argc, char* argv[]) {
 	std::cin >> stl_file_outside;
 	std::cout << "0 = RayTriangleIntersection, 1 = TriangleTriangleIntersection" << std::endl;
 	std::cin >> RayTriangle;
-	std::cout << "CPU? (yes = 1, no = 0)" << std::endl;
-	std::cin >> CPU;
 
 	if (argc == 2) {
 		stl_file_inside = argv[1];
@@ -38,13 +36,13 @@ int main(int argc, char* argv[]) {
 	auto t1 = std::chrono::high_resolution_clock::now(); //start time measurement
 
 	//Only reads STL-file in binary format!!!
-	std::cout << "lezen" << std::endl;
+	std::cout << "Reading files:" << std::endl;
 	std::unique_ptr<Mesh> triangleMesh_Inside = stl::parse_stl(stl_file_inside);
 	std::unique_ptr<Mesh> triangleMesh_Outside = stl::parse_stl(stl_file_outside);
 
 	auto t2 = std::chrono::high_resolution_clock::now(); //stop time measurement
 	auto time = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
-	std::cout << "Time = " << time << "ms" << std::endl;
+	std::cout << "Time = " << time << " milliseconds" << std::endl;
 
 	std::cout << "STL HEADER = " << triangleMesh_Inside->getName() << std::endl;
 	std::cout << "# triangles = " << triangleMesh_Inside->getNumberOfTriangles() << std::endl;
@@ -75,6 +73,8 @@ int main(int argc, char* argv[]) {
 
 	if (RayTriangle == 0)
 	{
+		std::cout << "CPU? (yes = 1, no = 0)" << std::endl;
+		std::cin >> CPU;
 		if (CPU == 1)
 		{
 			//2 opties om unique ptr mee te geven als argument aan een functie:
@@ -105,7 +105,7 @@ void rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::u
 	cudaDeviceSynchronize();
 	auto end = std::chrono::high_resolution_clock::now(); //stop time measurement
 	auto transferDuration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-	std::cout << "\t\t\tStartup time GPU = " << transferDuration << "ms" << std::endl;
+	std::cout << "\t\t\tStartup time GPU = " << transferDuration << " milliseconds" << std::endl;
 
 	std::cout << "\t\t\tCalculating intersections! (GPU)" << std::endl;
 	std::cout << "--- Data Transfer ---" << std::endl;
@@ -186,7 +186,7 @@ void rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::u
 	std::cout << "--- End Data Transfer ---" << std::endl;
 	end = std::chrono::high_resolution_clock::now(); //stop time measurement
 	transferDuration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-	std::cout << "\t\t\tTime Data Transfer = " << transferDuration << "ms" << std::endl;
+	std::cout << "\t\t\tTime Data Transfer = " << transferDuration << " milliseconds" << std::endl;
 
 	std::cout << "--- Calculating ---" << std::endl;
 	start = std::chrono::high_resolution_clock::now(); //start time measurement
@@ -204,6 +204,14 @@ void rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::u
 	//thrust::copy(resultVertices.begin(), resultVertices.end(), h_resultVertices.begin());
 	handleCudaError(cudaMemcpy(resultVertices, cudaResultVertices, numberOfInsideVertices * sizeof(float3), cudaMemcpyDeviceToHost));
 
+	std::cout << "--- End Calculating ---" << std::endl;
+	end = std::chrono::high_resolution_clock::now(); //stop time measurement
+	auto calculatingDuration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+	std::cout << "\t\t\tTime Calculating = " << calculatingDuration << " microseconds" << std::endl;
+	//std::cout << "\t\t\tTotal Time GPU = " << calculatingDuration + transferDuration << "ms" << std::endl;
+
+	std::cout << "Writing to file!" << std::endl;
+
 	std::unique_ptr<std::vector<Vertex>> verticesToWrite = std::make_unique<std::vector<Vertex>>();
 	verticesToWrite->reserve(numberOfInsideVertices);
 	float x, y, z;
@@ -213,20 +221,13 @@ void rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::u
 		x = resultVertices[i].x;
 		y = resultVertices[i].y;
 		z = resultVertices[i].z;
-		if (x + y + z != 0) 
+		if (x + y + z != 0)
 		{
-			verticesToWrite->emplace_back(x, y, z); 
+			verticesToWrite->emplace_back(x, y, z);
 			inside = false;
 		}
 	}
 
-	std::cout << "--- End Calculating ---" << std::endl;
-	end = std::chrono::high_resolution_clock::now(); //stop time measurement
-	auto calculatingDuration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-	std::cout << "\t\t\tTime Calculating = " << calculatingDuration << "ms" << std::endl;
-	std::cout << "\t\t\tTotal Time GPU = " << calculatingDuration+ transferDuration << "ms" << std::endl;
-
-	std::cout << "Writing to file!" << std::endl;
 	innerMesh->writeVerticesToFile(verticesToWrite, "OutsideVerticesCUDA.stl");
 
 	cudaFree(cudaInsideOrigins);
