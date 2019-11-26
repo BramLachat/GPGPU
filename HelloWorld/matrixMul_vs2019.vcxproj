@@ -106,18 +106,18 @@
     <CudaCompile Include="Main.cu" />
     <CudaCompile Include="RayTriangleIntersect.cu" />
     <CudaCompile Include="RayTriangleIntersect.cuh" />
+    <CudaCompile Include="TriangleTriangleIntersect.cu" />
+    <CudaCompile Include="TriangleTriangleIntersect.cuh" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Mesh.cpp" />
     <ClCompile Include="parse_stl.cpp" />
-    <ClCompile Include="TriangleTriangleIntersect.cpp" />
     <ClCompile Include="Triangle.cpp" />
     <ClCompile Include="Vertex.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Triangle.h" />
     <CudaCompile Include="Vertex.h" />
-    <ClInclude Include="TriangleTriangleIntersect.h" />
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="parse_stl.h" />
   </ItemGroup>
