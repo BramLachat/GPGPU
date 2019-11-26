@@ -34,3 +34,4 @@ Meshes/
 TriangleTriangle_v1/.vs/
 TriangleTriangle_v1/bin/
 TriangleTriangle_v1/x64/
+*.pdb
