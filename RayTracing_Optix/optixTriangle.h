@@ -34,16 +34,17 @@ struct Params
     uchar4*                image;
     uint32_t               image_width;
     uint32_t               image_height;
-    int32_t                origin_x;
-    int32_t                origin_y;
+    //int32_t                origin_x;
+    //int32_t                origin_y;
     OptixTraversableHandle handle;
 };
 
 
 struct RayGenData
 {
-    float3 cam_eye;
-    float3 camera_u, camera_v, camera_w;
+    float3* origins;
+	float3 direction;
+    //float3 camera_u, camera_v, camera_w;
 };
 
 
@@ -56,4 +57,9 @@ struct MissData
 struct HitGroupData
 {
     float radius;
+};
+
+struct AnyHitData
+{
+	float radius;
 };

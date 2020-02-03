@@ -61,6 +61,7 @@ struct SbtRecord
 typedef SbtRecord<RayGenData>     RayGenSbtRecord;
 typedef SbtRecord<MissData>       MissSbtRecord;
 typedef SbtRecord<HitGroupData>   HitGroupSbtRecord;
+typedef SbtRecord<AnyHitData>   AnyHitSbtRecord;
 
 
 void configureCamera( sutil::Camera& cam, const uint32_t width, const uint32_t height )
@@ -92,10 +93,10 @@ static void context_log_cb( unsigned int level, const char* tag, const char* mes
 
 int main( int argc, char* argv[] )
 {
-	//std::string stl_file_inside;
+	std::string stl_file_inside;
 	std::string stl_file_outside;
-	//std::cout << "Enter filename of inside mesh:" << std::endl;
-	//std::cin >> stl_file_inside;
+	std::cout << "Enter filename of inside mesh:" << std::endl;
+	std::cin >> stl_file_inside;
 	std::cout << "Enter filename of outside mesh:" << std::endl;
 	std::cin >> stl_file_outside;
 
@@ -103,16 +104,16 @@ int main( int argc, char* argv[] )
 
 	//Only reads STL-file in binary format!!!
 	std::cout << "Reading files:" << std::endl;
-	//std::unique_ptr<Mesh> triangleMesh_Inside = stl::parse_stl(stl_file_inside);
+	std::unique_ptr<Mesh> triangleMesh_Inside = stl::parse_stl(stl_file_inside);
 	std::unique_ptr<Mesh> triangleMesh_Outside = stl::parse_stl(stl_file_outside);
 
 	auto t2 = std::chrono::high_resolution_clock::now(); //stop time measurement
 	auto time = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
 	std::cout << "Time = " << time << " milliseconds" << std::endl;
 
-	//std::cout << "STL HEADER = " << triangleMesh_Inside->getName() << std::endl;
-	//std::cout << "# triangles = " << triangleMesh_Inside->getNumberOfTriangles() << std::endl;
-	//std::cout << "# vertices = " << triangleMesh_Inside->getNumberOfVertices() << std::endl;
+	std::cout << "STL HEADER = " << triangleMesh_Inside->getName() << std::endl;
+	std::cout << "# triangles = " << triangleMesh_Inside->getNumberOfTriangles() << std::endl;
+	std::cout << "# vertices = " << triangleMesh_Inside->getNumberOfVertices() << std::endl;
 
 	//triangleMesh_Inside.schrijf();
 
@@ -140,10 +141,10 @@ int main( int argc, char* argv[] )
 	//**********************************************************************************************************
 
     std::string outfile;
-    int         width  = 1024;
-    int         height =  768;
+    //int         width  = 1024;
+    //int         height =  768;
 
-    for( int i = 1; i < argc; ++i )
+    /*for( int i = 1; i < argc; ++i )
     {
         const std::string arg( argv[i] );
         if( arg == "--help" || arg == "-h" )
@@ -171,7 +172,7 @@ int main( int argc, char* argv[] )
             std::cerr << "Unknown option '" << arg << "'\n";
             printUsageAndExit( argv[0] );
         }
-    }
+    }*/
 
     try
     {
@@ -207,12 +208,13 @@ int main( int argc, char* argv[] )
             accel_options.operation  = OPTIX_BUILD_OPERATION_BUILD;
 
 			// Triangle build input: simple list of three vertices
-            const std::vector<float3> vertices =
+            /*const std::vector<float3> vertices =
             { {
                   { -1.0f, -1.0f, 0.0f },
                   {  0.1f, -0.1f, 0.0f },
                   {  0.0f,  0.1f, 0.0f }
-            } };
+            } };*/
+			const std::vector<float3> vertices = triangleMesh_Outside->getVerticesVector();
 
 			// Allocate and copy device memory for our input triangle vertices
             const size_t vertices_size = sizeof( float3 )*vertices.size();
@@ -349,7 +351,8 @@ int main( int argc, char* argv[] )
         //
         OptixProgramGroup raygen_prog_group   = nullptr;
         OptixProgramGroup miss_prog_group     = nullptr;
-        OptixProgramGroup hitgroup_prog_group = nullptr;
+        //OptixProgramGroup hitgroup_prog_group = nullptr;
+		OptixProgramGroup anyhit_prog_group = nullptr;
         {
             OptixProgramGroupOptions program_group_options   = {}; // Initialize to zeros
 
@@ -383,7 +386,7 @@ int main( int argc, char* argv[] )
                         &miss_prog_group
                         ) );
 
-            OptixProgramGroupDesc hitgroup_prog_group_desc = {};
+            /*OptixProgramGroupDesc hitgroup_prog_group_desc = {};
             hitgroup_prog_group_desc.kind                         = OPTIX_PROGRAM_GROUP_KIND_HITGROUP;
             hitgroup_prog_group_desc.hitgroup.moduleCH            = module;
             hitgroup_prog_group_desc.hitgroup.entryFunctionNameCH = "__closesthit__ch";
@@ -396,7 +399,21 @@ int main( int argc, char* argv[] )
                         log,
                         &sizeof_log,
                         &hitgroup_prog_group
-                        ) );
+                        ) );*/
+			OptixProgramGroupDesc anyhit_prog_group_desc = {};
+			anyhit_prog_group_desc.kind = OPTIX_PROGRAM_GROUP_KIND_HITGROUP;
+			anyhit_prog_group_desc.hitgroup.moduleAH = module;
+			anyhit_prog_group_desc.hitgroup.entryFunctionNameAH = "__anyhit__ah";
+			sizeof_log = sizeof(log);
+			OPTIX_CHECK_LOG(optixProgramGroupCreate(
+				context,
+				&anyhit_prog_group_desc,
+				1,   // num program groups
+				&program_group_options,
+				log,
+				&sizeof_log,
+				&anyhit_prog_group
+				));
         }
 
         //
@@ -404,7 +421,7 @@ int main( int argc, char* argv[] )
         //
         OptixPipeline pipeline = nullptr;
         {
-            OptixProgramGroup program_groups[] = { raygen_prog_group, miss_prog_group, hitgroup_prog_group };
+            OptixProgramGroup program_groups[] = { raygen_prog_group, miss_prog_group, anyhit_prog_group };
 
             OptixPipelineLinkOptions pipeline_link_options = {};
             pipeline_link_options.maxTraceDepth          = 5;
@@ -434,11 +451,13 @@ int main( int argc, char* argv[] )
             const size_t raygen_record_size = sizeof( RayGenSbtRecord );
             CUDA_CHECK( cudaMalloc( reinterpret_cast<void**>( &raygen_record ), raygen_record_size ) );
             sutil::Camera cam;
-            configureCamera( cam, width, height );
+            //configureCamera( cam, width, height );
             RayGenSbtRecord rg_sbt;
             rg_sbt.data ={};
-            rg_sbt.data.cam_eye = cam.eye();
-            cam.UVWFrame( rg_sbt.data.camera_u, rg_sbt.data.camera_v, rg_sbt.data.camera_w );
+            //rg_sbt.data.cam_eye = cam.eye();
+			rg_sbt.data.origins = triangleMesh_Inside->getFloat3ArrayVertices();
+			rg_sbt.data.direction = make_float3(direction[0], direction[1], direction[2]);
+            //cam.UVWFrame( rg_sbt.data.camera_u, rg_sbt.data.camera_v, rg_sbt.data.camera_w );
             OPTIX_CHECK( optixSbtRecordPackHeader( raygen_prog_group, &rg_sbt ) );
             CUDA_CHECK( cudaMemcpy(
                         reinterpret_cast<void*>( raygen_record ),
@@ -465,16 +484,16 @@ int main( int argc, char* argv[] )
                         cudaMemcpyHostToDevice
                         ) );
 
-            CUdeviceptr hitgroup_record;
-            size_t      hitgroup_record_size = sizeof( HitGroupSbtRecord );
-            CUDA_CHECK( cudaMalloc( reinterpret_cast<void**>( &hitgroup_record ), hitgroup_record_size ) );
-            HitGroupSbtRecord hg_sbt;
-            hg_sbt.data = { 1.5f };
-            OPTIX_CHECK( optixSbtRecordPackHeader( hitgroup_prog_group, &hg_sbt ) );
+            CUdeviceptr anyhit_record;
+            size_t      anyhit_record_size = sizeof( HitGroupSbtRecord );
+            CUDA_CHECK( cudaMalloc( reinterpret_cast<void**>( &anyhit_record), anyhit_record_size) );
+            AnyHitSbtRecord ah_sbt;
+            ah_sbt.data = { 1.5f };
+            OPTIX_CHECK( optixSbtRecordPackHeader(anyhit_prog_group, &ah_sbt ) );
             CUDA_CHECK( cudaMemcpy(
-                        reinterpret_cast<void*>( hitgroup_record ),
-                        &hg_sbt,
-                        hitgroup_record_size,
+                        reinterpret_cast<void*>(anyhit_record),
+                        &ah_sbt,
+						anyhit_record_size,
                         cudaMemcpyHostToDevice
                         ) );
 
@@ -483,12 +502,12 @@ int main( int argc, char* argv[] )
             sbt.missRecordBase              = miss_record;
             sbt.missRecordStrideInBytes     = sizeof( MissSbtRecord );
             sbt.missRecordCount             = 1;
-            sbt.hitgroupRecordBase          = hitgroup_record;
-            sbt.hitgroupRecordStrideInBytes = sizeof( HitGroupSbtRecord );
+            sbt.hitgroupRecordBase          = anyhit_record;
+            sbt.hitgroupRecordStrideInBytes = sizeof( AnyHitSbtRecord );
             sbt.hitgroupRecordCount         = 1;
         }
 
-        sutil::CUDAOutputBuffer<uchar4> output_buffer( sutil::CUDAOutputBufferType::CUDA_DEVICE, width, height );
+        sutil::CUDAOutputBuffer<uchar4> output_buffer( sutil::CUDAOutputBufferType::CUDA_DEVICE, triangleMesh_Inside->getNumberOfVertices(), 1 );
 
         //
         // launch
@@ -499,10 +518,10 @@ int main( int argc, char* argv[] )
 
             Params params;
             params.image        = output_buffer.map();
-            params.image_width  = width;
-            params.image_height = height;
-            params.origin_x     = width / 2;
-            params.origin_y     = height / 2;
+            params.image_width  = triangleMesh_Inside->getNumberOfVertices();
+            params.image_height = 1;
+            //params.origin_x     = width / 2;
+            //params.origin_y     = height / 2;
             params.handle       = gas_handle;
 
             CUdeviceptr d_param;
@@ -513,8 +532,8 @@ int main( int argc, char* argv[] )
                         cudaMemcpyHostToDevice
                         ) );
 
-			printf("width: %d, height: %d", width, height);
-            OPTIX_CHECK( optixLaunch( pipeline, stream, d_param, sizeof( Params ), &sbt, width, height, /*depth=*/1 ) );
+			//printf("width: %d, height: %d", width, height);
+            OPTIX_CHECK( optixLaunch( pipeline, stream, d_param, sizeof( Params ), &sbt, triangleMesh_Inside->getNumberOfVertices(), 1, /*depth=*/1 ) );
 
             CUDA_SYNC_CHECK();
 			
@@ -523,9 +542,9 @@ int main( int argc, char* argv[] )
 
 		uchar4* hopeloos = output_buffer.getHostPointer();
 		int teller = 0;
-		for (int i = 0; i < height; i++) {
-			for (int j = 0; j < width; j++) {
-				if (hopeloos[i * width + j].x == 255) {
+		for (int i = 0; i < 1; i++) {
+			for (int j = 0; j < triangleMesh_Inside->getNumberOfVertices(); j++) {
+				if (hopeloos[j].x == 255) {
 					teller++;
 				}
 			}
@@ -535,7 +554,7 @@ int main( int argc, char* argv[] )
         //
         // Display results
         //
-        {
+        /*{
             sutil::ImageBuffer buffer;
             buffer.data         = output_buffer.getHostPointer();
             buffer.width        = width;
@@ -545,7 +564,7 @@ int main( int argc, char* argv[] )
                 sutil::displayBufferWindow( argv[0], buffer );
             else
                 sutil::displayBufferFile( outfile.c_str(), buffer, false );
-        }
+        }*/
 
         //
         // Cleanup
@@ -557,7 +576,7 @@ int main( int argc, char* argv[] )
             CUDA_CHECK( cudaFree( reinterpret_cast<void*>( d_gas_output_buffer    ) ) );
 
             OPTIX_CHECK( optixPipelineDestroy( pipeline ) );
-            OPTIX_CHECK( optixProgramGroupDestroy( hitgroup_prog_group ) );
+            OPTIX_CHECK( optixProgramGroupDestroy( anyhit_prog_group ) );
             OPTIX_CHECK( optixProgramGroupDestroy( miss_prog_group ) );
             OPTIX_CHECK( optixProgramGroupDestroy( raygen_prog_group ) );
             OPTIX_CHECK( optixModuleDestroy( module ) );

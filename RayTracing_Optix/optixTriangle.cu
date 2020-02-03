@@ -103,22 +103,26 @@ extern "C" __global__ void __raygen__rg()
 {
     const uint3 idx = optixGetLaunchIndex();
     const uint3 dim = optixGetLaunchDimensions();
-	if (idx.x == 0 && idx.y == 0) {
+	/*if (idx.x == 0 && idx.y == 0) {
 		printf("dim.x = %d, dim.y = %d", dim.x, dim.y);
-	}
+	}*/
 
     const RayGenData* rtData = (RayGenData*)optixGetSbtDataPointer();
-    const float3      U      = rtData->camera_u;
+    /*const float3      U      = rtData->camera_u;
     const float3      V      = rtData->camera_v;
     const float3      W      = rtData->camera_w;
     const float2      d = 2.0f * make_float2(
             static_cast<float>( idx.x ) / static_cast<float>( dim.x ),
             static_cast<float>( idx.y ) / static_cast<float>( dim.y )
-            ) - 1.0f;
+            ) - 1.0f;*/
 
-    const float3 origin      = rtData->cam_eye; // optixTriangle.cpp lijn 494
-    const float3 direction   = normalize( d.x * U + d.y * V + W );
+    const float3 origin      = rtData->origins[idx.x]; // optixTriangle.cpp lijn 494
+    //const float3 direction   = normalize( d.x * U + d.y * V + W );
+	const float3 direction = rtData->direction;
     float3       payload_rgb = make_float3( 0.5f, 0.5f, 0.5f );
+
+	printf("origin: %d, %d, %d; direction: %d, %d, %d\n", origin.x, origin.y, origin.z, direction.x, direction.y, direction.z);
+
     trace( params.handle,
             origin,
             direction,
@@ -126,7 +130,7 @@ extern "C" __global__ void __raygen__rg()
             1e16f,  // tmax
             &payload_rgb );
 
-    params.image[idx.y * params.image_width + idx.x] = make_color( payload_rgb );
+    params.image[idx.x] = make_color( payload_rgb );
 }
 
 
@@ -139,11 +143,16 @@ extern "C" __global__ void __miss__ms()
 }
 
 
-extern "C" __global__ void __closesthit__ch()
+/*extern "C" __global__ void __closesthit__ch()
 {
 
     //const float2 barycentrics = optixGetTriangleBarycentrics();
 	//printf("snijden: ");
 
     setPayload( make_float3( 1.0f, 1.0f, 1.0f ) );
+}*/
+
+extern "C" __global__ void __anyhit__ah()
+{
+	setPayload(make_float3(1.0f, 1.0f, 1.0f));
 }
