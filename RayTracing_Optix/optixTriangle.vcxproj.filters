@@ -1,0 +1,62 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="C:\ProgramData\NVIDIA Corporation\OptiX SDK 7.0.0\SDK\optixTriangle\optixTriangle.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\ProgramData\NVIDIA Corporation\OptiX SDK 7.0.0\SDK\optixTriangle\Mesh.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\ProgramData\NVIDIA Corporation\OptiX SDK 7.0.0\SDK\optixTriangle\parse_stl.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\ProgramData\NVIDIA Corporation\OptiX SDK 7.0.0\SDK\optixTriangle\Triangle.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\ProgramData\NVIDIA Corporation\OptiX SDK 7.0.0\SDK\optixTriangle\Vertex.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="C:\ProgramData\NVIDIA Corporation\OptiX SDK 7.0.0\SDK\optixTriangle\optixTriangle.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\ProgramData\NVIDIA Corporation\OptiX SDK 7.0.0\SDK\optixTriangle\Mesh.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\ProgramData\NVIDIA Corporation\OptiX SDK 7.0.0\SDK\optixTriangle\parse_stl.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\ProgramData\NVIDIA Corporation\OptiX SDK 7.0.0\SDK\optixTriangle\Triangle.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="C:\ProgramData\NVIDIA Corporation\OptiX SDK 7.0.0\SDK\optixTriangle\Vertex.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="C:\ProgramData\NVIDIA Corporation\OptiX SDK 7.0.0\SDK\optixTriangle\optixTriangle.cu">
+      <Filter>CUDA Files</Filter>
+    </CustomBuild>
+    <CustomBuild Include="C:\ProgramData\NVIDIA Corporation\OptiX SDK 7.0.0\SDK\optixTriangle\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="C:\ProgramData\NVIDIA Corporation\OptiX SDK 7.0.0\SDK\lib\ptx\optixTriangle_generated_optixTriangle.cu.ptx">
+      <Filter>PTX Files</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="CUDA Files">
+      <UniqueIdentifier>{6FCE2A5F-DE72-38C2-B9D3-931D4A4630E3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{4BDD35CF-BD2D-39A7-B5DC-C308F97AFF8E}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="PTX Files">
+      <UniqueIdentifier>{509C8814-C36B-3AFF-8443-6B937CC68327}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{1F617FF7-B7BB-38B0-B288-41DE572B3C52}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
