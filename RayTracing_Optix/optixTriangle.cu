@@ -121,7 +121,7 @@ extern "C" __global__ void __raygen__rg()
 	const float3 direction = rtData->direction;
     float3       payload_rgb = make_float3( 0.5f, 0.5f, 0.5f );
 
-	printf("origin: %d, %d, %d; direction: %d, %d, %d\n", origin.x, origin.y, origin.z, direction.x, direction.y, direction.z);
+	//printf("origin: %d, %d, %d; direction: %d, %d, %d\n", origin.x, origin.y, origin.z, direction.x, direction.y, direction.z);
 
     trace( params.handle,
             origin,
@@ -136,6 +136,7 @@ extern "C" __global__ void __raygen__rg()
 
 extern "C" __global__ void __miss__ms()
 {
+	//printf("miss!\n");
     MissData* rt_data  = reinterpret_cast<MissData*>( optixGetSbtDataPointer() );
 	//printf("MISS: %d, %d, %d\n", rt_data->r, rt_data->g, rt_data->b);
     float3    payload = getPayload();
@@ -143,16 +144,17 @@ extern "C" __global__ void __miss__ms()
 }
 
 
-/*extern "C" __global__ void __closesthit__ch()
+extern "C" __global__ void __closesthit__ch()
 {
 
     //const float2 barycentrics = optixGetTriangleBarycentrics();
 	//printf("snijden: ");
-
+	printf("snijden!\n");
     setPayload( make_float3( 1.0f, 1.0f, 1.0f ) );
-}*/
+}
 
 extern "C" __global__ void __anyhit__ah()
 {
+	printf("snijden!\n");
 	setPayload(make_float3(1.0f, 1.0f, 1.0f));
 }

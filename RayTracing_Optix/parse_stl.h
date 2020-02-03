@@ -36,6 +36,7 @@ namespace stl {
 	};
 
 	std::unique_ptr<Mesh> parse_stl(const std::string& stl_path);
+	std::unique_ptr<Mesh> parse_stl_with_duplicate_vertices(const std::string& stl_path);
 
 }
 

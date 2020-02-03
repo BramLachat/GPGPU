@@ -105,7 +105,7 @@ int main( int argc, char* argv[] )
 	//Only reads STL-file in binary format!!!
 	std::cout << "Reading files:" << std::endl;
 	std::unique_ptr<Mesh> triangleMesh_Inside = stl::parse_stl(stl_file_inside);
-	std::unique_ptr<Mesh> triangleMesh_Outside = stl::parse_stl(stl_file_outside);
+	std::unique_ptr<Mesh> triangleMesh_Outside = stl::parse_stl_with_duplicate_vertices(stl_file_outside);
 
 	auto t2 = std::chrono::high_resolution_clock::now(); //stop time measurement
 	auto time = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
@@ -135,6 +135,9 @@ int main( int argc, char* argv[] )
 	//float direction[3] = { 1.0, 1.0, 1.0 };
 
 	std::cout << "direction = " << direction[0] << ", " << direction[1] << ", " << direction[2] << std::endl;
+	std::cout << "AnyHit (0) or ClosestHit(1)?" << std::endl;
+	int AH_CH = 0;
+	std::cin >> AH_CH;
 
 	//**********************************************************************************************************
 	//----------------------------------------------------------------------------------------------------------
@@ -215,6 +218,20 @@ int main( int argc, char* argv[] )
                   {  0.0f,  0.1f, 0.0f }
             } };*/
 			const std::vector<float3> vertices = triangleMesh_Outside->getVerticesVector();
+
+			/*// Declaring iterator to a vector 
+			std::vector<float3>::iterator ptr;
+
+			// Displaying vector elements using begin() and end() 
+			std::cout << "The vector elements are : ";
+			int teller = 0;
+			for (ptr = vertices.begin(); ptr < vertices.end(); ptr++) { // als je hier fout krijgt, 'const' bij const std::vector<float3> vertices weg doen
+				std::cout << ptr->x << "\t";
+				teller++;
+				if (teller%3 == 0) {
+					std::cout << std::endl;
+				}
+			}*/
 
 			// Allocate and copy device memory for our input triangle vertices
             const size_t vertices_size = sizeof( float3 )*vertices.size();
@@ -351,8 +368,8 @@ int main( int argc, char* argv[] )
         //
         OptixProgramGroup raygen_prog_group   = nullptr;
         OptixProgramGroup miss_prog_group     = nullptr;
-        //OptixProgramGroup hitgroup_prog_group = nullptr;
 		OptixProgramGroup anyhit_prog_group = nullptr;
+		OptixProgramGroup hitgroup_prog_group = nullptr;
         {
             OptixProgramGroupOptions program_group_options   = {}; // Initialize to zeros
 
@@ -385,35 +402,38 @@ int main( int argc, char* argv[] )
                         &sizeof_log,
                         &miss_prog_group
                         ) );
-
-            /*OptixProgramGroupDesc hitgroup_prog_group_desc = {};
-            hitgroup_prog_group_desc.kind                         = OPTIX_PROGRAM_GROUP_KIND_HITGROUP;
-            hitgroup_prog_group_desc.hitgroup.moduleCH            = module;
-            hitgroup_prog_group_desc.hitgroup.entryFunctionNameCH = "__closesthit__ch";
-            sizeof_log = sizeof( log );
-            OPTIX_CHECK_LOG( optixProgramGroupCreate(
-                        context,
-                        &hitgroup_prog_group_desc,
-                        1,   // num program groups
-                        &program_group_options,
-                        log,
-                        &sizeof_log,
-                        &hitgroup_prog_group
-                        ) );*/
-			OptixProgramGroupDesc anyhit_prog_group_desc = {};
-			anyhit_prog_group_desc.kind = OPTIX_PROGRAM_GROUP_KIND_HITGROUP;
-			anyhit_prog_group_desc.hitgroup.moduleAH = module;
-			anyhit_prog_group_desc.hitgroup.entryFunctionNameAH = "__anyhit__ah";
-			sizeof_log = sizeof(log);
-			OPTIX_CHECK_LOG(optixProgramGroupCreate(
-				context,
-				&anyhit_prog_group_desc,
-				1,   // num program groups
-				&program_group_options,
-				log,
-				&sizeof_log,
-				&anyhit_prog_group
+			if (AH_CH == 0) { //ANYHIT
+				OptixProgramGroupDesc anyhit_prog_group_desc = {};
+				anyhit_prog_group_desc.kind = OPTIX_PROGRAM_GROUP_KIND_HITGROUP;
+				anyhit_prog_group_desc.hitgroup.moduleAH = module;
+				anyhit_prog_group_desc.hitgroup.entryFunctionNameAH = "__anyhit__ah";
+				sizeof_log = sizeof(log);
+				OPTIX_CHECK_LOG(optixProgramGroupCreate(
+					context,
+					&anyhit_prog_group_desc,
+					1,   // num program groups
+					&program_group_options,
+					log,
+					&sizeof_log,
+					&anyhit_prog_group
 				));
+			}
+			else { //CLOSESTHIT
+				OptixProgramGroupDesc hitgroup_prog_group_desc = {};
+			hitgroup_prog_group_desc.kind                         = OPTIX_PROGRAM_GROUP_KIND_HITGROUP;
+			hitgroup_prog_group_desc.hitgroup.moduleCH            = module;
+			hitgroup_prog_group_desc.hitgroup.entryFunctionNameCH = "__closesthit__ch";
+			sizeof_log = sizeof( log );
+			OPTIX_CHECK_LOG( optixProgramGroupCreate(
+						context,
+						&hitgroup_prog_group_desc,
+						1,   // num program groups
+						&program_group_options,
+						log,
+						&sizeof_log,
+						&hitgroup_prog_group
+						) );
+			}
         }
 
         //
@@ -421,8 +441,17 @@ int main( int argc, char* argv[] )
         //
         OptixPipeline pipeline = nullptr;
         {
-            OptixProgramGroup program_groups[] = { raygen_prog_group, miss_prog_group, anyhit_prog_group };
-
+			OptixProgramGroup program_groups[3];
+			if (AH_CH == 0) { //ANYHIT
+				program_groups[0] = raygen_prog_group;
+				program_groups[1] = miss_prog_group;
+				program_groups[2] = anyhit_prog_group;
+			}
+			else { //CLOSESTHIT
+				program_groups[0] = raygen_prog_group;
+				program_groups[1] = miss_prog_group;
+				program_groups[2] = hitgroup_prog_group;
+			}
             OptixPipelineLinkOptions pipeline_link_options = {};
             pipeline_link_options.maxTraceDepth          = 5;
             pipeline_link_options.debugLevel             = OPTIX_COMPILE_DEBUG_LEVEL_FULL;
@@ -485,24 +514,48 @@ int main( int argc, char* argv[] )
                         ) );
 
             CUdeviceptr anyhit_record;
-            size_t      anyhit_record_size = sizeof( HitGroupSbtRecord );
-            CUDA_CHECK( cudaMalloc( reinterpret_cast<void**>( &anyhit_record), anyhit_record_size) );
-            AnyHitSbtRecord ah_sbt;
-            ah_sbt.data = { 1.5f };
-            OPTIX_CHECK( optixSbtRecordPackHeader(anyhit_prog_group, &ah_sbt ) );
-            CUDA_CHECK( cudaMemcpy(
-                        reinterpret_cast<void*>(anyhit_record),
-                        &ah_sbt,
-						anyhit_record_size,
-                        cudaMemcpyHostToDevice
-                        ) );
+			CUdeviceptr hitgroup_record;
+
+			if (AH_CH == 0) { //ANYHIT
+				size_t      anyhit_record_size = sizeof(AnyHitSbtRecord);
+				CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&anyhit_record), anyhit_record_size));
+				AnyHitSbtRecord ah_sbt;
+				ah_sbt.data = { 1.5f };
+				OPTIX_CHECK(optixSbtRecordPackHeader(anyhit_prog_group, &ah_sbt));
+				CUDA_CHECK(cudaMemcpy(
+					reinterpret_cast<void*>(anyhit_record),
+					&ah_sbt,
+					anyhit_record_size,
+					cudaMemcpyHostToDevice
+				));
+			}
+			else { //CLOSESTHIT
+				size_t      hitgroup_record_size = sizeof(HitGroupSbtRecord);
+				CUDA_CHECK(cudaMalloc(reinterpret_cast<void**>(&hitgroup_record), hitgroup_record_size));
+				HitGroupSbtRecord hg_sbt;
+				hg_sbt.data = { 1.5f };
+				OPTIX_CHECK(optixSbtRecordPackHeader(hitgroup_prog_group, &hg_sbt));
+				CUDA_CHECK(cudaMemcpy(
+					reinterpret_cast<void*>(hitgroup_record),
+					&hg_sbt,
+					hitgroup_record_size,
+					cudaMemcpyHostToDevice
+				));
+			}
 
 			// Finally we specify how many records and how they are packed in memory
             sbt.raygenRecord                = raygen_record;
             sbt.missRecordBase              = miss_record;
             sbt.missRecordStrideInBytes     = sizeof( MissSbtRecord );
             sbt.missRecordCount             = 1;
-            sbt.hitgroupRecordBase          = anyhit_record;
+            
+			if (AH_CH == 0) { //ANYHIT
+				sbt.hitgroupRecordBase = anyhit_record;
+			}
+			else { //CLOSESTHIT
+				sbt.hitgroupRecordBase = hitgroup_record;
+			}
+
             sbt.hitgroupRecordStrideInBytes = sizeof( AnyHitSbtRecord );
             sbt.hitgroupRecordCount         = 1;
         }
@@ -577,6 +630,7 @@ int main( int argc, char* argv[] )
 
             OPTIX_CHECK( optixPipelineDestroy( pipeline ) );
             OPTIX_CHECK( optixProgramGroupDestroy( anyhit_prog_group ) );
+			OPTIX_CHECK(optixProgramGroupDestroy(hitgroup_prog_group));
             OPTIX_CHECK( optixProgramGroupDestroy( miss_prog_group ) );
             OPTIX_CHECK( optixProgramGroupDestroy( raygen_prog_group ) );
             OPTIX_CHECK( optixModuleDestroy( module ) );
