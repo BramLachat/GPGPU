@@ -120,7 +120,8 @@ void Mesh::rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh)
 		if (numberOfIntersections % 2 == 0)
 		{
 			inside = false;
-			outsideVertices->push_back(*innerVertex);
+			break;
+			//outsideVertices->push_back(*innerVertex);
 		}
 	}
 

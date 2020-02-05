@@ -111,7 +111,7 @@ void rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::u
 	std::cout << "--- Data Transfer ---" << std::endl;
 	start = std::chrono::high_resolution_clock::now(); //start time measurement
 
-	bool* inside;
+	bool* inside = new bool;
 	*inside = true;
 	bool* cudaInside;
 	handleCudaError(cudaMalloc((void**)&cudaInside, sizeof(bool)));
@@ -203,6 +203,8 @@ void rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::u
 	cudaError_t err = cudaGetLastError();
 	handleCudaError(err);
 
+	handleCudaError(cudaMemcpy(inside, cudaInside, sizeof(bool), cudaMemcpyDeviceToHost));
+
 	//std::vector<int> h_intersectionsPerOrigin(intersectionsPerOrigin.size());
 	//hrust::copy(intersectionsPerOrigin.begin(), intersectionsPerOrigin.end(), h_intersectionsPerOrigin.begin());
 	//handleCudaError(cudaMemcpy(intersectionsPerOrigin, cudaIntersectionsPerOrigin, numberOfInsideVertices * sizeof(int), cudaMemcpyDeviceToHost));
@@ -229,9 +231,9 @@ void rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::u
 
 	std::cout << "--- End Calculating ---" << std::endl;
 	end = std::chrono::high_resolution_clock::now(); //stop time measurement
-	auto calculatingDuration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-	std::cout << "\t\t\tTime Calculating = " << calculatingDuration << "ms" << std::endl;
-	std::cout << "\t\t\tTotal Time GPU = " << calculatingDuration+ transferDuration << "ms" << std::endl;
+	auto calculatingDuration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+	std::cout << "\t\t\tTime Calculating = " << calculatingDuration << " microseconds" << std::endl;
+	//std::cout << "\t\t\tTotal Time GPU = " << calculatingDuration+ transferDuration << "ms" << std::endl;
 
 	/*std::cout << "Writing to file!" << std::endl;
 	innerMesh->writeVerticesToFile(verticesToWrite, "OutsideVerticesCUDA.stl");*/
@@ -251,6 +253,8 @@ void rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::u
 	std::cout << "totaal intersecties: " << totalIntersections << std::endl;
 	if (*inside) { std::cout << "INSIDE" << std::endl; }
 	else { std::cout << "OUTSIDE" << std::endl; }
+
+	delete inside;
 }
 
 void handleCudaError(cudaError_t cudaERR) {
