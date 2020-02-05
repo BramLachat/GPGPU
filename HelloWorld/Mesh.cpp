@@ -60,7 +60,7 @@ int Mesh::findDuplicate(const Vertex& v)
 		return -1;
 	}*/
 }
-void Mesh::rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh)
+void Mesh::rayTriangleIntersectOpenMP(float dir[3], std::unique_ptr<Mesh>& innerMesh)
 {
 	std::vector<Vertex> outermesh_vertices = vertices; //Nodig voor OpenMP
 	std::vector<Triangle> outermesh_triangles = triangles; //Nodig voor OpenMP
@@ -81,6 +81,80 @@ void Mesh::rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh)
 #pragma omp parallel shared(innerMesh,outermesh_vertices,outermesh_triangles,totalIntersections,outsideVertices)
 	{
 
+		//std::unique_ptr<float[]> orig = std::make_unique<float[]>(3); //smart pointer
+		//std::vector<float> orig;
+		float* t = new float;
+		float* u = new float;
+		float* v = new float;
+		Vertex* V1;
+		Vertex* V2;
+		Vertex* V3;
+		float* vert1;
+		float* vert2;
+		float* vert3;
+		float* orig;
+		//float dirPerPoint[3];
+		int tid = omp_get_thread_num();
+		totalIntersections->at(tid) = 0;
+
+		Vertex* innerVertex;
+
+		std::cout << "\t\t\tCalculating intersections! (CPU)" << std::endl;
+
+#pragma omp for schedule(static)
+		for (int j = 0; j < innerMesh->getNumberOfVertices(); j++)
+		{
+			innerVertex = &(innerMesh->vertices.at(j));
+			orig = innerVertex->getCoordinates();
+
+			int numberOfIntersections = 0;
+
+			for (int i = 0; i < triangles.size(); i++)
+			{
+				V1 = &(vertices.at(triangles.at(i).getIndexOfVertexInMesh(0)));
+				V2 = &(vertices.at(triangles.at(i).getIndexOfVertexInMesh(1)));
+				V3 = &(vertices.at(triangles.at(i).getIndexOfVertexInMesh(2)));
+				vert1 = V1->getCoordinates();
+				vert2 = V2->getCoordinates();
+				vert3 = V3->getCoordinates();
+				if (Intersection::intersect_triangleCPU(orig, dir, vert1, vert2, vert3, t, u, v) == 1)
+				{
+					numberOfIntersections++;
+				}
+			}
+			//totalIntersections->at(tid) += numberOfIntersections;
+			if (numberOfIntersections % 2 == 0)
+			{
+				inside = false;
+				break;
+				//outsideVertices->at(j) = *innerVertex;
+			}
+		}
+		/*if (tid == 0) {
+			for (int i = 1; i < aantal_threads; i++) {
+				totalIntersections->at(0) += totalIntersections->at(i);
+			}
+			totaalAantalIntersecties = totalIntersections->at(0);
+		}*/
+		delete t; delete u; delete v;
+	}
+
+	auto end = std::chrono::high_resolution_clock::now(); //stop time measurement
+	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+	std::cout << "\t\t\tTime CPU = " << duration << "ms" << std::endl;
+
+	std::cout << "totaal intersecties = " << totaalAantalIntersecties << std::endl;
+	if (inside) { std::cout << "INSIDE" << std::endl; }
+	else { std::cout << "OUTSIDE" << std::endl; }
+
+	std::cout << "Writing to file!" << std::endl;
+	writeVerticesToFile(outsideVertices, "OutsideVertices.stl");
+}
+void Mesh::rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh)
+{
+	std::cout << "\t\t\tCalculating intersections! (CPU)" << std::endl;
+	auto start = std::chrono::high_resolution_clock::now(); //start time measurement
+
 	//std::unique_ptr<float[]> orig = std::make_unique<float[]>(3); //smart pointer
 	//std::vector<float> orig;
 	float* t = new float;
@@ -93,23 +167,18 @@ void Mesh::rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh)
 	float* vert2;
 	float* vert3;
 	float* orig;
-	//float dirPerPoint[3];
-	int tid = omp_get_thread_num();
-	totalIntersections->at(tid) = 0;
 
 	Vertex* innerVertex;
 
-	std::cout << "\t\t\tCalculating intersections! (CPU)" << std::endl;
+	std::unique_ptr<std::vector<Vertex>> outsideVertices = std::make_unique<std::vector<Vertex>>();
 
-#pragma omp for schedule(static)
-	for(int j = 0 ; j < innerMesh->getNumberOfVertices() ; j++)
+	bool inside = true;
+	int totalIntersections = 0;
+
+	for (int j = 0; j < innerMesh->getNumberOfVertices(); j++)
 	{
 		innerVertex = &(innerMesh->vertices.at(j));
 		orig = innerVertex->getCoordinates();
-		//dirPerPoint[0] = dir[0] - orig[0];
-		//dirPerPoint[1] = dir[1] - orig[1];
-		//dirPerPoint[2] = dir[2] - orig[2];
-		//std::cout << "orig = " << orig[0] << ", " << orig[1] << ", " << orig[2] << std::endl;
 
 		int numberOfIntersections = 0;
 
@@ -125,34 +194,23 @@ void Mesh::rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh)
 			if (Intersection::intersect_triangleCPU(orig, dir, vert1, vert2, vert3, t, u, v) == 1)
 			{
 				numberOfIntersections++;
-				//std::cout << "1, ";
-			}
-			else {
-				//std::cout << "0, ";
 			}
 		}
-		totalIntersections->at(tid) += numberOfIntersections;
-		//std::cout << "aantal intersecties = " << numberOfIntersections << std::endl;
+		//totalIntersections += numberOfIntersections;
 		if (numberOfIntersections % 2 == 0)
 		{
 			inside = false;
-			outsideVertices->at(j) = *innerVertex;
+			break;
+			//outsideVertices->push_back(*innerVertex);
 		}
-	}
-	if (tid == 0) {
-		for (int i = 1; i < aantal_threads; i++) {
-			totalIntersections->at(0) += totalIntersections->at(i);
-		}
-		totaalAantalIntersecties = totalIntersections->at(0);
-	}
-	delete t; delete u; delete v;
 	}
 
 	auto end = std::chrono::high_resolution_clock::now(); //stop time measurement
 	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
 	std::cout << "\t\t\tTime CPU = " << duration << "ms" << std::endl;
 
-	std::cout << "totaal intersecties = " << totaalAantalIntersecties << std::endl;
+	std::cout << "totaal intersecties = " << totalIntersections << std::endl;
+	delete t; delete u; delete v;
 	if (inside) { std::cout << "INSIDE" << std::endl; }
 	else { std::cout << "OUTSIDE" << std::endl; }
 
@@ -161,6 +219,7 @@ void Mesh::rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh)
 }
 void Mesh::triangleTriangleIntersect(std::unique_ptr<Mesh>& innerMesh)
 {
+	std::cout << "\t\t\tCalculating intersecting triangles! (CPU)" << std::endl;
 	auto start = std::chrono::high_resolution_clock::now(); //start time measurement
 
 	float* vert1_1;
@@ -179,16 +238,15 @@ void Mesh::triangleTriangleIntersect(std::unique_ptr<Mesh>& innerMesh)
 	bool inside = true;
 	int totalIntersections = 0;
 
-	std::cout << "\t\t\tCalculating intersecting triangles! (CPU)" << std::endl;
-
-	for (int j = 0; j < innerMesh->getNumberOfTriangles(); j++)
+	int j = 0;
+	while (j < innerMesh->getNumberOfTriangles() && inside)
 	{
 		t1 = &(innerMesh->triangles.at(j));
 		vert1_1 = innerVertices->at(t1->getIndexOfVertexInMesh(0)).getCoordinates();
 		vert1_2 = innerVertices->at(t1->getIndexOfVertexInMesh(1)).getCoordinates();
 		vert1_3 = innerVertices->at(t1->getIndexOfVertexInMesh(2)).getCoordinates();
 
-		int numberOfIntersections = 0;
+		//int numberOfIntersections = 0;
 
 		for (int i = 0; i < triangles.size(); i++)
 		{
@@ -199,27 +257,25 @@ void Mesh::triangleTriangleIntersect(std::unique_ptr<Mesh>& innerMesh)
 			if (NoDivTriTriIsect(vert1_1, vert1_2, vert1_3, vert2_1, vert2_2, vert2_3) == 1)
 			{
 				//list printed with intersecting triangles
-				intersectingTriangles1->push_back(*t1);
-				intersectingTriangles2->push_back(*t2);
+				//intersectingTriangles1->push_back(*t1);
+				//intersectingTriangles2->push_back(*t2);
 
-				numberOfIntersections++;
+				//numberOfIntersections++;
+				inside = false;
+				break;
 			}
 		}
-		totalIntersections += numberOfIntersections;
-		//std::cout << "aantal intersecties = " << numberOfIntersections << std::endl;
+		j++;
+		//totalIntersections += numberOfIntersections;
 	}
-	if (totalIntersections != 0)
-	{
-		inside = false;
-	}
-	std::cout << "Aantal intersecties: " << totalIntersections << std::endl;
-	if (inside) { std::cout << "SNIJDEN NIET" << std::endl; }
-	else { std::cout << "SNIJDEN WEL" << std::endl; }
-
 	auto end = std::chrono::high_resolution_clock::now(); //stop time measurement
 	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
 	std::cout << "\t\t\tTime CPU = " << duration << "ms" << std::endl;
 
+	std::cout << "Aantal intersecties: " << totalIntersections << std::endl;
+	if (inside) { std::cout << "SNIJDEN NIET" << std::endl; }
+	else { std::cout << "SNIJDEN WEL" << std::endl; }
+	
 	std::cout << "Writing to file!" << std::endl;
 	writeTrianglesToFile(intersectingTriangles1, innerVertices, "IntersectingTriangles1.stl");
 	writeTrianglesToFile(intersectingTriangles2, &vertices, "IntersectingTriangles2.stl");

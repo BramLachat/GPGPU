@@ -22,6 +22,7 @@ int main(int argc, char* argv[]) {
 	std::string stl_file_outside;
 	int RayTriangle;
 	int CPU;
+	int multiThreading;
 	std::cout << "Enter filename of inside mesh:" << std::endl;
 	std::cin >> stl_file_inside;
 	std::cout << "Enter filename of outside mesh:" << std::endl;
@@ -80,9 +81,18 @@ int main(int argc, char* argv[]) {
 		std::cin >> CPU;
 		if (CPU == 1)
 		{
-			//2 opties om unique ptr mee te geven als argument aan een functie:
-			//https://stackoverflow.com/questions/30905487/how-can-i-pass-stdunique-ptr-into-a-function
-			triangleMesh_Outside->rayTriangleIntersect(direction, triangleMesh_Inside); // CPU version
+			std::cout << "Multithreading? (yes = 1, no = 0)" << std::endl;
+			std::cin >> multiThreading;
+			if (multiThreading == 1)
+			{
+				triangleMesh_Outside->rayTriangleIntersectOpenMP(direction, triangleMesh_Inside); // CPU version
+			}
+			else 
+			{
+				//2 opties om unique ptr mee te geven als argument aan een functie:
+				//https://stackoverflow.com/questions/30905487/how-can-i-pass-stdunique-ptr-into-a-function
+				triangleMesh_Outside->rayTriangleIntersect(direction, triangleMesh_Inside); // CPU version
+			}
 		}
 		rayTriangleIntersect(direction, triangleMesh_Inside, triangleMesh_Outside); // GPU version
 	}
