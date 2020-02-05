@@ -119,7 +119,7 @@ void rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::u
 	std::cout << "--- Data Transfer ---" << std::endl;
 	start = std::chrono::high_resolution_clock::now(); //start time measurement
 
-	bool* inside;
+	bool* inside = new bool;
 	*inside = true;
 	bool* cudaInside;
 	handleCudaError(cudaMalloc((void**)& cudaInside, sizeof(bool)));
@@ -281,7 +281,12 @@ void TriangleTriangleIntersect(std::unique_ptr<Mesh>& innerMesh, std::unique_ptr
 	std::cout << "--- Data Transfer ---" << std::endl;
 	start = std::chrono::high_resolution_clock::now(); //start time measurement
 
-	bool inside = true;
+	bool* inside = new bool;
+	*inside = true;
+	bool* cudaInside;
+	handleCudaError(cudaMalloc((void**)&cudaInside, sizeof(bool)));
+	handleCudaError(cudaMemcpy(cudaInside, inside, sizeof(bool), cudaMemcpyHostToDevice));
+
 	int numberOfOutsideTriangles = outerMesh->getNumberOfTriangles();
 	int numberOfOutsideVertices = outerMesh->getNumberOfVertices();
 	int numberOfInsideTriangles = innerMesh->getNumberOfTriangles();
@@ -316,9 +321,9 @@ void TriangleTriangleIntersect(std::unique_ptr<Mesh>& innerMesh, std::unique_ptr
 	handleCudaError(cudaMemcpyAsync(cudaOutsideTriangles, outsideTriangles, sizeOutsideTriangles, cudaMemcpyHostToDevice));
 
 	/* Alloceren van geheugen op GPU om bij te houden met hoeveel driehoeken van de buitenste mesh deze ene driehoek van de binnenste mesh snijdt*/
-	int* intersectionsPerInsideTriangle = new int[numberOfInsideTriangles];
-	int* cudaIntersectionsPerInsideTriangle;
-	handleCudaError(cudaMalloc((void**)&cudaIntersectionsPerInsideTriangle, numberOfInsideTriangles * sizeof(int)));
+	//int* intersectionsPerInsideTriangle = new int[numberOfInsideTriangles];
+	//int* cudaIntersectionsPerInsideTriangle;
+	//handleCudaError(cudaMalloc((void**)&cudaIntersectionsPerInsideTriangle, numberOfInsideTriangles * sizeof(int)));
 
 	/* Als deze waarde > 0 ==> De binnenste mesh ligt niet volledig in de buitenste mesh*/
 	int totalIntersections = 0;
@@ -333,38 +338,42 @@ void TriangleTriangleIntersect(std::unique_ptr<Mesh>& innerMesh, std::unique_ptr
 
 	/* Uitvoeren CUDA kernel*/
 	int numberOfBlocks = ((int)((numberOfInsideTriangles + 511) / 512));
-	triangle_triangle_GPU<<<numberOfBlocks,512>>>(cudaInsideTriangles, cudaInsideVertices, cudaOutsideTriangles, cudaOutsideVertices, cudaIntersectionsPerInsideTriangle, numberOfInsideTriangles, numberOfOutsideTriangles);
+	triangle_triangle_GPU<<<numberOfBlocks,512>>>(cudaInsideTriangles, cudaInsideVertices, cudaOutsideTriangles, cudaOutsideVertices, cudaInside, numberOfInsideTriangles, numberOfOutsideTriangles);
 	cudaError_t err = cudaGetLastError();
 	handleCudaError(err);
 
 	/* Kopiëren van de resultaten van GPU naar CPU*/
-	handleCudaError(cudaMemcpy(intersectionsPerInsideTriangle, cudaIntersectionsPerInsideTriangle, numberOfInsideTriangles * sizeof(int), cudaMemcpyDeviceToHost));
+	//handleCudaError(cudaMemcpy(intersectionsPerInsideTriangle, cudaIntersectionsPerInsideTriangle, numberOfInsideTriangles * sizeof(int), cudaMemcpyDeviceToHost));
+	handleCudaError(cudaMemcpy(inside, cudaInside, sizeof(bool), cudaMemcpyDeviceToHost));
 
 	std::cout << "--- End Calculating ---" << std::endl;
 	end = std::chrono::high_resolution_clock::now(); //stop time measurement
 	auto calculatingDuration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
 	std::cout << "\t\t\tTime Calculating = " << calculatingDuration << " microseconds" << std::endl;
 
-	for (int i = 0; i < numberOfInsideTriangles; i++)
+	/*for (int i = 0; i < numberOfInsideTriangles; i++)
 	{
 		totalIntersections += intersectionsPerInsideTriangle[i];
 	}
-	if (totalIntersections > 0) { inside = false; }
+	if (totalIntersections > 0) { inside = false; }*/
 
 	cudaFree(cudaInsideTriangles);
 	cudaFree(cudaInsideVertices);
 	cudaFree(cudaOutsideTriangles);
 	cudaFree(cudaOutsideVertices);
-	cudaFree(cudaIntersectionsPerInsideTriangle);
+	cudaFree(cudaInside);
+	//cudaFree(cudaIntersectionsPerInsideTriangle);
 	cudaFreeHost(outsideTriangles);
 	cudaFreeHost(outsideVertices);
 	cudaFreeHost(insideTriangles);
 	cudaFreeHost(insideVertices);
-	delete intersectionsPerInsideTriangle;
+	//delete intersectionsPerInsideTriangle;
 
 	std::cout << "totaal intersecties: " << totalIntersections << std::endl;
-	if (inside) { std::cout << "SNIJDEN NIET" << std::endl; }
+	if (*inside) { std::cout << "SNIJDEN NIET" << std::endl; }
 	else { std::cout << "SNIJDEN WEL" << std::endl; }
+
+	delete inside;
 }
 
 void handleCudaError(cudaError_t cudaERR) {

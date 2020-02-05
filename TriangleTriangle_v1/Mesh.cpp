@@ -136,15 +136,16 @@ void Mesh::rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh)
 		if (numberOfIntersections % 2 == 0)
 		{
 			inside = false;
-			outsideVertices->at(j) = *innerVertex;
+			break;
+			//outsideVertices->at(j) = *innerVertex;
 		}
 	}
-	if (tid == 0) {
+	/*if (tid == 0) {
 		for (int i = 1; i < aantal_threads; i++) {
 			totalIntersections->at(0) += totalIntersections->at(i);
 		}
 		totaalAantalIntersecties = totalIntersections->at(0);
-	}
+	}*/
 	delete t; delete u; delete v;
 	}
 
@@ -181,14 +182,15 @@ void Mesh::triangleTriangleIntersect(std::unique_ptr<Mesh>& innerMesh)
 
 	std::cout << "\t\t\tCalculating intersecting triangles! (CPU)" << std::endl;
 
-	for (int j = 0; j < innerMesh->getNumberOfTriangles(); j++)
+	int j = 0;
+	while(j < innerMesh->getNumberOfTriangles() && inside)
 	{
 		t1 = &(innerMesh->triangles.at(j));
 		vert1_1 = innerVertices->at(t1->getIndexOfVertexInMesh(0)).getCoordinates();
 		vert1_2 = innerVertices->at(t1->getIndexOfVertexInMesh(1)).getCoordinates();
 		vert1_3 = innerVertices->at(t1->getIndexOfVertexInMesh(2)).getCoordinates();
 
-		int numberOfIntersections = 0;
+		//int numberOfIntersections = 0;
 
 		for (int i = 0; i < triangles.size(); i++)
 		{
@@ -199,19 +201,22 @@ void Mesh::triangleTriangleIntersect(std::unique_ptr<Mesh>& innerMesh)
 			if (NoDivTriTriIsect(vert1_1, vert1_2, vert1_3, vert2_1, vert2_2, vert2_3) == 1)
 			{
 				//list printed with intersecting triangles
-				intersectingTriangles1->push_back(*t1);
-				intersectingTriangles2->push_back(*t2);
+				//intersectingTriangles1->push_back(*t1);
+				//intersectingTriangles2->push_back(*t2);
 
-				numberOfIntersections++;
+				//numberOfIntersections++;
+				inside = false;
+				break;
 			}
 		}
-		totalIntersections += numberOfIntersections;
+		j++;
+		//totalIntersections += numberOfIntersections;
 		//std::cout << "aantal intersecties = " << numberOfIntersections << std::endl;
 	}
-	if (totalIntersections != 0)
+	/*if (totalIntersections != 0)
 	{
 		inside = false;
-	}
+	}*/
 	std::cout << "Aantal intersecties: " << totalIntersections << std::endl;
 	if (inside) { std::cout << "SNIJDEN NIET" << std::endl; }
 	else { std::cout << "SNIJDEN WEL" << std::endl; }
