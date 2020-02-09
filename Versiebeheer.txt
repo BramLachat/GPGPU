@@ -4,3 +4,8 @@ _v3 = cudaMallocManaged (thread per origin)
 _v4 = thread per ray-triangle intersection
 _v5 = block per origin + shared memory
 _v6 = page-locked memory (thread per origin)
+HelloWorld = thread per triangle
+___________________________________________________
+
+TriangleTriangle_v1 = thread per (inner) triangle
+TriangleTriangle_v2 = block per (inner) triangle
