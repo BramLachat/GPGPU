@@ -320,6 +320,13 @@ void TriangleTriangleIntersect(std::unique_ptr<Mesh>& innerMesh, std::unique_ptr
 	handleCudaError(cudaMalloc((void**)&cudaOutsideTriangles, sizeOutsideTriangles));
 	handleCudaError(cudaMemcpyAsync(cudaOutsideTriangles, outsideTriangles, sizeOutsideTriangles, cudaMemcpyHostToDevice));
 
+	//TODO: extra lijst met outside mesh driehoekintervallen meegeven (ongesorteerd, omdat ik op dit moment geen idee heb waarom die gesorteerd zou moeten zijn)
+	float2* outsideTriangleIntervals = outerMesh->getTriangleInterval();
+	float2* cudaOutsideTriangleIntervals;
+	int sizeOutsideIntervals = numberOfOutsideTriangles * sizeof(float2);
+	handleCudaError(cudaMalloc((void**)&cudaOutsideTriangleIntervals, sizeOutsideIntervals));
+	handleCudaError(cudaMemcpyAsync(cudaOutsideTriangleIntervals, outsideTriangleIntervals, sizeOutsideIntervals, cudaMemcpyHostToDevice));
+
 	/* Alloceren van geheugen op GPU om bij te houden met hoeveel driehoeken van de buitenste mesh deze ene driehoek van de binnenste mesh snijdt*/
 	//int* intersectionsPerInsideTriangle = new int[numberOfInsideTriangles];
 	//int* cudaIntersectionsPerInsideTriangle;
@@ -338,7 +345,8 @@ void TriangleTriangleIntersect(std::unique_ptr<Mesh>& innerMesh, std::unique_ptr
 
 	/* Uitvoeren CUDA kernel*/
 	int numberOfBlocks = ((int)((numberOfInsideTriangles + 511) / 512));
-	triangle_triangle_GPU<<<numberOfBlocks,512>>>(cudaInsideTriangles, cudaInsideVertices, cudaOutsideTriangles, cudaOutsideVertices, cudaInside, numberOfInsideTriangles, numberOfOutsideTriangles);
+
+	triangle_triangle_GPU<<<numberOfBlocks,512>>>(cudaInsideTriangles, cudaInsideVertices, cudaOutsideTriangles, cudaOutsideVertices, cudaInside, numberOfInsideTriangles, numberOfOutsideTriangles, cudaOutsideTriangleIntervals);
 	cudaError_t err = cudaGetLastError();
 	handleCudaError(err);
 

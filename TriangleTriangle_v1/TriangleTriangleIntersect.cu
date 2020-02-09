@@ -19,6 +19,7 @@
 #include <device_launch_parameters.h>
 
 #include "TriangleTriangleIntersect.cuh"
+
 #define FABS(x) (float(fabs(x)))        /* implement as is fastest on your machine */
 
  /* if USE_EPSILON_TEST is true then we do a check:
@@ -307,13 +308,21 @@
 		return 0;
 	}
 
-	__global__ void triangle_triangle_GPU(int3* cudaInsideTriangles, float3* cudaInsideVertices, int3* cudaOutsideTriangles, float3* cudaOutsideVertices, bool* inside, int numberOfInsideTriangles, int numberOfOutsideTriangles) { // , int* cudaIntersectionsPerInsideTriangle
+	//thread per triangle
+	__global__ void triangle_triangle_GPU(int3* cudaInsideTriangles, float3* cudaInsideVertices, int3* cudaOutsideTriangles, float3* cudaOutsideVertices, bool* inside, int numberOfInsideTriangles, int numberOfOutsideTriangles, float2* cudaOutsideTriangleIntervals) { // , int* cudaIntersectionsPerInsideTriangle
 		int tid = threadIdx.x + blockIdx.x * blockDim.x;
 		if (tid < numberOfInsideTriangles)
 		{
 			float vert1_1[3] = { cudaInsideVertices[cudaInsideTriangles[tid].x].x, cudaInsideVertices[cudaInsideTriangles[tid].x].y, cudaInsideVertices[cudaInsideTriangles[tid].x].z };
 			float vert1_2[3] = { cudaInsideVertices[cudaInsideTriangles[tid].y].x, cudaInsideVertices[cudaInsideTriangles[tid].y].y, cudaInsideVertices[cudaInsideTriangles[tid].y].z };
 			float vert1_3[3] = { cudaInsideVertices[cudaInsideTriangles[tid].z].x, cudaInsideVertices[cudaInsideTriangles[tid].z].y, cudaInsideVertices[cudaInsideTriangles[tid].z].z };
+
+			float max_temp = (vert1_1[0] < vert1_2[0]) ? vert1_2[0] : vert1_1[0];
+			float max =  ((max_temp < vert1_3[0]) ? vert1_3[0] : max_temp);
+
+			float min_temp = (vert1_1[0] > vert1_2[0]) ? vert1_2[0] : vert1_1[0];
+			float min = ((min_temp > vert1_3[0]) ? vert1_3[0] : min_temp);
+
 			//int numberOfIntersections = 0;
 			for (int i = 0; i < numberOfOutsideTriangles; i++)
 			{
@@ -321,15 +330,17 @@
 					float vert2_1[3] = { cudaOutsideVertices[cudaOutsideTriangles[i].x].x, cudaOutsideVertices[cudaOutsideTriangles[i].x].y, cudaOutsideVertices[cudaOutsideTriangles[i].x].z };
 					float vert2_2[3] = { cudaOutsideVertices[cudaOutsideTriangles[i].y].x, cudaOutsideVertices[cudaOutsideTriangles[i].y].y, cudaOutsideVertices[cudaOutsideTriangles[i].y].z };
 					float vert2_3[3] = { cudaOutsideVertices[cudaOutsideTriangles[i].z].x, cudaOutsideVertices[cudaOutsideTriangles[i].z].y, cudaOutsideVertices[cudaOutsideTriangles[i].z].z };
-					float t, u, v;
-					if (NoDivTriTriIsect(vert1_1, vert1_2, vert1_3, vert2_1, vert2_2, vert2_3) == 1)
+					if(cudaOutsideTriangleIntervals[i].x <= max && cudaOutsideTriangleIntervals[i].y >= min) // Broad Phase Collision Detection (x = min, y = max) 
 					{
-						//numberOfIntersections++;
-						*inside = false;
-						return;
-						//cudaIntersectionsPerInsideTriangle[tid] = 1; // Sneller als je dit weg laat in het geval de meshes elkaar niet sijden ==> dit zorgt er voor dat het trager wordt als de meshes in elkaar liggen
+						if (NoDivTriTriIsect(vert1_1, vert1_2, vert1_3, vert2_1, vert2_2, vert2_3) == 1)
+						{
+							//numberOfIntersections++;
+							*inside = false;
+							return;
+							//cudaIntersectionsPerInsideTriangle[tid] = 1; // Sneller als je dit weg laat in het geval de meshes elkaar niet sijden ==> dit zorgt er voor dat het trager wordt als de meshes in elkaar liggen
+						}
+						//if(intersect){ cudaIntersectionsPerInsideTriangle[tid] = 1; } // Sneller als je dit weg laat in het geval de meshes elkaar niet sijden
 					}
-					//if(intersect){ cudaIntersectionsPerInsideTriangle[tid] = 1; } // Sneller als je dit weg laat in het geval de meshes elkaar niet sijden
 				}
 				else {
 					return;

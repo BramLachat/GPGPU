@@ -5,6 +5,7 @@
 #include <map>
 #include <fstream>
 #include <chrono>
+#include <algorithm> 
 
 #include "omp.h"
 #include "Mesh.h"
@@ -333,6 +334,23 @@ thrust::host_vector<float3> Mesh::getVerticesVector()
 		result[i] = vertices[i].getCoordinatesFloat3();
 	}
 	return result;
+}
+//TODO: Max x en min x waarde van elke driehoek berekenen 
+float2* Mesh::getTriangleInterval()
+{
+	int3* triangleArray = getInt3ArrayTriangles();
+	float2* intervalArray;
+	cudaError_t status = cudaHostAlloc((void**)&intervalArray, triangles.size() * sizeof(float2), cudaHostAllocDefault);
+	float max;
+	float min;
+	float2 interval;
+	for (int i = 0; i < triangles.size(); i++) {
+		max = std::max({ vertices[triangleArray[i].x].getCoordinate(0), vertices[triangleArray[i].y].getCoordinate(0), vertices[triangleArray[i].z].getCoordinate(0) });
+		min = std::min({ vertices[triangleArray[i].x].getCoordinate(0), vertices[triangleArray[i].y].getCoordinate(0), vertices[triangleArray[i].z].getCoordinate(0) });
+		interval = make_float2(min, max);
+		intervalArray[i] = interval;
+	}
+	return intervalArray;
 }
 void Mesh::writeVerticesToFile(std::unique_ptr<std::vector<Vertex>>& vertices, std::string fileName)
 {
