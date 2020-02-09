@@ -31,7 +31,7 @@
 #include <optix_stubs.h>
 
 #include <cuda_runtime.h>
-
+#include <chrono>
 #include <sampleConfig.h>
 
 #include <sutil/CUDAOutputBuffer.h>
@@ -560,7 +560,7 @@ int main( int argc, char* argv[] )
             sbt.hitgroupRecordCount         = 1;
         }
 
-        sutil::CUDAOutputBuffer<uchar4> output_buffer( sutil::CUDAOutputBufferType::CUDA_DEVICE, triangleMesh_Inside->getNumberOfVertices(), 1 );
+        sutil::CUDAOutputBuffer<uchar1> output_buffer( sutil::CUDAOutputBufferType::CUDA_DEVICE, triangleMesh_Inside->getNumberOfVertices(), 1 );
 
         //
         // launch
@@ -585,24 +585,36 @@ int main( int argc, char* argv[] )
                         cudaMemcpyHostToDevice
                         ) );
 
+			std::cout << "--- Calculating ---" << std::endl;
+			auto start = std::chrono::high_resolution_clock::now(); //start time measurement
+			
 			//printf("width: %d, height: %d", width, height);
             OPTIX_CHECK( optixLaunch( pipeline, stream, d_param, sizeof( Params ), &sbt, triangleMesh_Inside->getNumberOfVertices(), 1, /*depth=*/1 ) );
 
             CUDA_SYNC_CHECK();
 			
             output_buffer.unmap();
-        }
 
-		uchar4* hopeloos = output_buffer.getHostPointer();
-		int teller = 0;
-		for (int i = 0; i < 1; i++) {
+			bool inside = true;
+			uchar1* hopeloos = output_buffer.getHostPointer();
+			int teller = 0;
 			for (int j = 0; j < triangleMesh_Inside->getNumberOfVertices(); j++) {
-				if (hopeloos[j].x == 255) {
-					teller++;
+				printf("output: %d\n", hopeloos[j].x);
+				teller += hopeloos[j].x;
+				if (hopeloos[j].x % 2 == 0) {
+					inside = false;
+					break;
 				}
 			}
-		}
-		std::cout << "teller: " << teller << std::endl;
+
+			std::cout << "--- End Calculating ---" << std::endl;
+			auto end = std::chrono::high_resolution_clock::now(); //stop time measurement
+			auto calculatingDuration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+			std::cout << "\t\t\tTime Calculating = " << calculatingDuration << " microseconds" << std::endl;
+
+			std::cout << "teller: " << teller << std::endl;
+			std::cout << "inside: " << inside << std::endl;
+        }
 			
         //
         // Display results
@@ -629,8 +641,12 @@ int main( int argc, char* argv[] )
             CUDA_CHECK( cudaFree( reinterpret_cast<void*>( d_gas_output_buffer    ) ) );
 
             OPTIX_CHECK( optixPipelineDestroy( pipeline ) );
-            OPTIX_CHECK( optixProgramGroupDestroy( anyhit_prog_group ) );
-			OPTIX_CHECK(optixProgramGroupDestroy(hitgroup_prog_group));
+			if (AH_CH == 0) { //ANYHIT
+				OPTIX_CHECK(optixProgramGroupDestroy(anyhit_prog_group));
+			}
+			else { //CLOSESTHIT
+				OPTIX_CHECK(optixProgramGroupDestroy(hitgroup_prog_group));
+			}		
             OPTIX_CHECK( optixProgramGroupDestroy( miss_prog_group ) );
             OPTIX_CHECK( optixProgramGroupDestroy( raygen_prog_group ) );
             OPTIX_CHECK( optixModuleDestroy( module ) );
@@ -643,5 +659,9 @@ int main( int argc, char* argv[] )
         std::cerr << "Caught exception: " << e.what() << "\n";
         return 1;
     }
+	std::cout << "Press Enter to quit program!" << std::endl;
+	std::cin.get();
+	std::cin.get();
+
     return 0;
 }

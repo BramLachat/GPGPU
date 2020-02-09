@@ -32,6 +32,7 @@
 
 #include <sutil/vec_math.h>
 #include <iostream>
+#include <cuda_runtime.h>
 
 extern "C" {
 __constant__ Params params;
@@ -44,58 +45,45 @@ static __forceinline__ __device__ void trace(
         float3                 ray_direction,
         float                  tmin,
         float                  tmax,
-        float3*                prd
+        float*                 prd
         )
 {
-    uint32_t p0, p1, p2;
-    p0 = float_as_int( prd->x );
-    p1 = float_as_int( prd->y );
-    p2 = float_as_int( prd->z );
+    uint32_t p0;
+    p0 = float_as_int( *prd );
     optixTrace(
             handle,
             ray_origin,
             ray_direction,
             tmin,
             tmax,
-            0.0f,                // rayTime
+            0.5f,                // rayTime
             OptixVisibilityMask( 1 ),
             OPTIX_RAY_FLAG_NONE,
             0,                   // SBT offset
             0,                   // SBT stride
             0,                   // missSBTIndex
-            p0, p1, p2 );
-    prd->x = int_as_float( p0 );
-    prd->y = int_as_float( p1 );
-    prd->z = int_as_float( p2 );
+            p0 );
+    *prd = int_as_float( p0 );
 }
 
 
-static __forceinline__ __device__ void setPayload( float3 p )
+static __forceinline__ __device__ void setPayload( float p )
 {
-    optixSetPayload_0( float_as_int( p.x ) );
-    optixSetPayload_1( float_as_int( p.y ) );
-    optixSetPayload_2( float_as_int( p.z ) );
+    optixSetPayload_0( float_as_int( p ) );
 }
 
 
-static __forceinline__ __device__ float3 getPayload()
+static __forceinline__ __device__ float getPayload()
 {
-    return make_float3(
-            int_as_float( optixGetPayload_0() ),
-            int_as_float( optixGetPayload_1() ),
-            int_as_float( optixGetPayload_2() )
-            );
+	return int_as_float(optixGetPayload_0());
 }
 
 
-__forceinline__ __device__ uchar4 make_color( const float3&  c )
+__forceinline__ __device__ uchar1 make_color( const float&  c )
 {
-    return make_uchar4(
-            static_cast<uint8_t>( clamp( c.x, 0.0f, 1.0f ) *255.0f ),
-            static_cast<uint8_t>( clamp( c.y, 0.0f, 1.0f ) *255.0f ),
-            static_cast<uint8_t>( clamp( c.z, 0.0f, 1.0f ) *255.0f ),
-            255u
-            );
+    return make_uchar1(
+		static_cast<uint8_t>( c )
+	);
 }
 
 
@@ -119,7 +107,7 @@ extern "C" __global__ void __raygen__rg()
     const float3 origin      = rtData->origins[idx.x]; // optixTriangle.cpp lijn 494
     //const float3 direction   = normalize( d.x * U + d.y * V + W );
 	const float3 direction = rtData->direction;
-    float3       payload_rgb = make_float3( 0.5f, 0.5f, 0.5f );
+    float       payload = 0.0f;
 
 	//printf("origin: %d, %d, %d; direction: %d, %d, %d\n", origin.x, origin.y, origin.z, direction.x, direction.y, direction.z);
 
@@ -128,19 +116,19 @@ extern "C" __global__ void __raygen__rg()
             direction,
             0.00f,  // tmin
             1e16f,  // tmax
-            &payload_rgb );
+            &payload);
 
-    params.image[idx.x] = make_color( payload_rgb );
+    params.image[idx.x] = make_color(payload);
 }
 
 
 extern "C" __global__ void __miss__ms()
 {
 	//printf("miss!\n");
-    MissData* rt_data  = reinterpret_cast<MissData*>( optixGetSbtDataPointer() );
+    //MissData* rt_data  = reinterpret_cast<MissData*>( optixGetSbtDataPointer() );
 	//printf("MISS: %d, %d, %d\n", rt_data->r, rt_data->g, rt_data->b);
-    float3    payload = getPayload();
-    setPayload( make_float3( rt_data->r, rt_data->g, rt_data->b ) );
+    //float    payload = getPayload();
+    ///setPayload( rt_data->r);
 }
 
 
@@ -149,12 +137,12 @@ extern "C" __global__ void __closesthit__ch()
 
     //const float2 barycentrics = optixGetTriangleBarycentrics();
 	//printf("snijden: ");
-	printf("snijden!\n");
-    setPayload( make_float3( 1.0f, 1.0f, 1.0f ) );
+	//printf("snijden!\n");
+    setPayload( 1.0f );
 }
 
 extern "C" __global__ void __anyhit__ah()
 {
-	printf("snijden!\n");
-	setPayload(make_float3(1.0f, 1.0f, 1.0f));
+	//printf("snijden!\n");
+	setPayload( getPayload() + 1.0f );
 }
