@@ -308,7 +308,7 @@
 		return 0;
 	}
 
-	//block per triangle (with Broad Phase Collision Detection)
+	//block per (inner) triangle (with Broad Phase Collision Detection)
 	__global__ void triangle_triangle_GPU_BPCD(	int3* cudaInsideTriangles,
 											float3* cudaInsideVertices, 
 											int3* cudaOutsideTriangles, 
@@ -353,7 +353,7 @@
 		//cudaIntersectionsPerInsideTriangle[tid] = numberOfIntersections;
 	}
 
-	//block per triangle (without Broad Phase Collision Detection)
+	//block per (inner) triangle (without Broad Phase Collision Detection)
 	__global__ void triangle_triangle_GPU(int3* cudaInsideTriangles,
 		float3* cudaInsideVertices,
 		int3* cudaOutsideTriangles,
