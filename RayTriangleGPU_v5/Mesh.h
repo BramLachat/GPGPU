@@ -35,6 +35,7 @@ public:
 	thrust::host_vector<int3> getTrianglesVector();
 	float3* getFloat3ArrayVertices();
 	thrust::host_vector<float3> getVerticesVector();
+	float2* Mesh::getTriangleInterval();
 	void writeVerticesToFile(std::unique_ptr<std::vector<Vertex>>& vertices, std::string fileName);
 };
 #endif // !MESH_H
