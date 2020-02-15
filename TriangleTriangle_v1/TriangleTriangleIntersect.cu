@@ -184,7 +184,7 @@
 		du0du1 = du0 * du1;
 		du0du2 = du0 * du2;
 
-		if (du0du1 > 0.0f && du0du2 > 0.0f) /* same sign on all of them + not equal 0 ? */
+		if (du0du1 > 0.0f && du0du2 > 0.0f) /* same sign on all of them (liggen alle punten aan dezelfde kant van de driehoek) + not equal 0 (equal 0 zou willen zeggen dat ze coplanair zijn) ? */
 			return 0;                    /* no intersection occurs */
 
 		  /* compute plane of triangle (U0,U1,U2) */
@@ -308,8 +308,8 @@
 		return 0;
 	}
 
-	//thread per triangle
-	__global__ void triangle_triangle_GPU(int3* cudaInsideTriangles, float3* cudaInsideVertices, int3* cudaOutsideTriangles, float3* cudaOutsideVertices, bool* inside, int numberOfInsideTriangles, int numberOfOutsideTriangles, float2* cudaOutsideTriangleIntervals) { // , int* cudaIntersectionsPerInsideTriangle
+	//thread per (inner) triangle
+	__global__ void triangle_triangle_GPU_BPCD(int3* cudaInsideTriangles, float3* cudaInsideVertices, int3* cudaOutsideTriangles, float3* cudaOutsideVertices, bool* inside, int numberOfInsideTriangles, int numberOfOutsideTriangles, float2* cudaOutsideTriangleIntervals) { // , int* cudaIntersectionsPerInsideTriangle
 		int tid = threadIdx.x + blockIdx.x * blockDim.x;
 		if (tid < numberOfInsideTriangles)
 		{
@@ -341,6 +341,40 @@
 						}
 						//if(intersect){ cudaIntersectionsPerInsideTriangle[tid] = 1; } // Sneller als je dit weg laat in het geval de meshes elkaar niet sijden
 					}
+				}
+				else {
+					return;
+				}
+			}
+			//printf("numberOfIntersections = %d\n", numberOfIntersections);
+			//cudaIntersectionsPerInsideTriangle[tid] = numberOfIntersections;
+		}
+	}
+
+	//thread per (inner) triangle
+	__global__ void triangle_triangle_GPU(int3* cudaInsideTriangles, float3* cudaInsideVertices, int3* cudaOutsideTriangles, float3* cudaOutsideVertices, bool* inside, int numberOfInsideTriangles, int numberOfOutsideTriangles) { // , int* cudaIntersectionsPerInsideTriangle
+		int tid = threadIdx.x + blockIdx.x * blockDim.x;
+		if (tid < numberOfInsideTriangles)
+		{
+			float vert1_1[3] = { cudaInsideVertices[cudaInsideTriangles[tid].x].x, cudaInsideVertices[cudaInsideTriangles[tid].x].y, cudaInsideVertices[cudaInsideTriangles[tid].x].z };
+			float vert1_2[3] = { cudaInsideVertices[cudaInsideTriangles[tid].y].x, cudaInsideVertices[cudaInsideTriangles[tid].y].y, cudaInsideVertices[cudaInsideTriangles[tid].y].z };
+			float vert1_3[3] = { cudaInsideVertices[cudaInsideTriangles[tid].z].x, cudaInsideVertices[cudaInsideTriangles[tid].z].y, cudaInsideVertices[cudaInsideTriangles[tid].z].z };
+
+			//int numberOfIntersections = 0;
+			for (int i = 0; i < numberOfOutsideTriangles; i++)
+			{
+				if (*inside) {
+					float vert2_1[3] = { cudaOutsideVertices[cudaOutsideTriangles[i].x].x, cudaOutsideVertices[cudaOutsideTriangles[i].x].y, cudaOutsideVertices[cudaOutsideTriangles[i].x].z };
+					float vert2_2[3] = { cudaOutsideVertices[cudaOutsideTriangles[i].y].x, cudaOutsideVertices[cudaOutsideTriangles[i].y].y, cudaOutsideVertices[cudaOutsideTriangles[i].y].z };
+					float vert2_3[3] = { cudaOutsideVertices[cudaOutsideTriangles[i].z].x, cudaOutsideVertices[cudaOutsideTriangles[i].z].y, cudaOutsideVertices[cudaOutsideTriangles[i].z].z };
+					if (NoDivTriTriIsect(vert1_1, vert1_2, vert1_3, vert2_1, vert2_2, vert2_3) == 1)
+					{
+						//numberOfIntersections++;
+						*inside = false;
+						return;
+						//cudaIntersectionsPerInsideTriangle[tid] = 1; // Sneller als je dit weg laat in het geval de meshes elkaar niet sijden ==> dit zorgt er voor dat het trager wordt als de meshes in elkaar liggen
+					}
+					//if(intersect){ cudaIntersectionsPerInsideTriangle[tid] = 1; } // Sneller als je dit weg laat in het geval de meshes elkaar niet sijden
 				}
 				else {
 					return;
