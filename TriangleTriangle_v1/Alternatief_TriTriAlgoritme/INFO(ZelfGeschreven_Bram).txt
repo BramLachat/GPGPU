@@ -1,0 +1,13 @@
+Source code: https://github.com/erich666/jgt-code/blob/master/Volume_08/Number_1/Guigue2003/tri_tri_intersect.c
+Gevonden op: http://www.realtimerendering.com/intersections.html
+Uitleg over algoritme door auteur: http://www.philippe-guigue.de/data/triangle_triangle_intersection.html
+	-->Abstract:	This paper presents an algorithm for determining whether two triangles in three dimensions intersect. 
+			The general scheme is identical to the one proposed by Möller. 
+			The main difference is that our algorithm relies exclusively on the sign of 4 x 4 determinants and 
+			does not need any intermediate explicit constructions which are source of numerical errors. 
+			Besides the fact that the resulting code is more reliable than existing methods, it is also more efficient.
+
+Ik heb zelf enkele korte testjes gedaan en is zeker niet sneller dan Möller!!!
+
+De bestanden in deze map (Mesh.cpp, TriangleTriangleIntersect.cu, TriangleTriangleIntersect.cuh), zijn de bestanden die ik heb moeten aanpassen
+om deze alternatieve implementatie te doen werken.
