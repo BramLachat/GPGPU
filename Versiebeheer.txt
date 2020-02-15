@@ -2,10 +2,12 @@ _v1 = float3 en int3 (thread per origin)
 _v2 = host en device vector (thread per origin)
 _v3 = cudaMallocManaged (thread per origin)
 _v4 = thread per ray-triangle intersection
+
 _v5 = block per origin + shared memory
 _v6 = page-locked memory (thread per origin)
-HelloWorld = thread per triangle
+_v7 = thread per triangle
 ___________________________________________________
 
 TriangleTriangle_v1 = thread per (inner) triangle
 TriangleTriangle_v2 = block per (inner) triangle
+TriangleTriangle_v3 = thread per (outer) triangle
