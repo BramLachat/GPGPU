@@ -23,6 +23,7 @@ public:
 	void addTriangle(const Triangle& t);
 	void addVertex(const Vertex& v);
 	int findDuplicate(const Vertex& v);
+	void rayTriangleIntersectOpenMP(float dir[3], std::unique_ptr<Mesh>& innerMesh);
 	void rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh);
 	void triangleTriangleIntersect(std::unique_ptr<Mesh>& innerMesh);
 	int getLastVertex();
