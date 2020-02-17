@@ -3,11 +3,16 @@ _v2 = host en device vector (thread per origin)
 _v3 = cudaMallocManaged (thread per origin)
 _v4 = thread per ray-triangle intersection
 
-_v5 = block per origin + shared memory
-_v6 = page-locked memory (thread per origin)
-_v7 = thread per triangle
+RayTriangleGPU_v5 = block per origin
+RayTriangleGPU_v6 = thread per origin
+RayTriangleGPU_v7 = thread per triangle
 ___________________________________________________
 
 TriangleTriangle_v1 = thread per (inner) triangle
 TriangleTriangle_v2 = block per (inner) triangle
 TriangleTriangle_v3 = thread per (outer) triangle
+____________________________________________________
+
+OpenMP: RayTriangle
+CGAL: RayTriangle + TriangleTriangle
+Optix = RayTriangle
