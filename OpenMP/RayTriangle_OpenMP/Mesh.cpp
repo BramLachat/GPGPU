@@ -71,12 +71,12 @@ void Mesh::rayTriangleIntersectOpenMP(float dir[3], std::unique_ptr<Mesh>& inner
 	omp_set_num_threads(aantal_threads);
 	std::cout << "aantal threads: " << omp_get_num_threads() << std::endl;
 
-	auto start = std::chrono::high_resolution_clock::now(); //start time measurement
-
 	std::unique_ptr<std::vector<Vertex>> outsideVertices = std::make_unique<std::vector<Vertex>>(innerMesh->getNumberOfVertices());
 	bool inside = true;
 	std::unique_ptr<std::vector<int>> totalIntersections = std::make_unique<std::vector<int>>(aantal_threads);
 	int totaalAantalIntersecties = 0;
+
+	auto start = std::chrono::high_resolution_clock::now(); //start time measurement
 
 #pragma omp parallel shared(innerMesh,outermesh_vertices,outermesh_triangles,totalIntersections,outsideVertices)
 	{
@@ -99,7 +99,7 @@ void Mesh::rayTriangleIntersectOpenMP(float dir[3], std::unique_ptr<Mesh>& inner
 
 		Vertex* innerVertex;
 
-		std::cout << "\t\t\tCalculating intersections! (CPU)" << std::endl;
+		//std::cout << "\t\t\tCalculating intersections! (CPU)" << std::endl;
 
 #pragma omp for schedule(static)
 		for (int j = 0; j < innerMesh->getNumberOfVertices(); j++)
@@ -126,7 +126,7 @@ void Mesh::rayTriangleIntersectOpenMP(float dir[3], std::unique_ptr<Mesh>& inner
 			if (numberOfIntersections % 2 == 0)
 			{
 				inside = false;
-				break;
+				//break;
 				//outsideVertices->at(j) = *innerVertex;
 			}
 		}
@@ -153,7 +153,6 @@ void Mesh::rayTriangleIntersectOpenMP(float dir[3], std::unique_ptr<Mesh>& inner
 void Mesh::rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh)
 {
 	std::cout << "\t\t\tCalculating intersections! (CPU)" << std::endl;
-	auto start = std::chrono::high_resolution_clock::now(); //start time measurement
 
 	//std::unique_ptr<float[]> orig = std::make_unique<float[]>(3); //smart pointer
 	//std::vector<float> orig;
@@ -174,6 +173,8 @@ void Mesh::rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh)
 
 	bool inside = true;
 	int totalIntersections = 0;
+
+	auto start = std::chrono::high_resolution_clock::now(); //start time measurement
 
 	for (int j = 0; j < innerMesh->getNumberOfVertices(); j++)
 	{
@@ -200,7 +201,7 @@ void Mesh::rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh)
 		if (numberOfIntersections % 2 == 0)
 		{
 			inside = false;
-			break;
+			//break;
 			//outsideVertices->push_back(*innerVertex);
 		}
 	}
@@ -220,7 +221,6 @@ void Mesh::rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh)
 void Mesh::triangleTriangleIntersect(std::unique_ptr<Mesh>& innerMesh)
 {
 	std::cout << "\t\t\tCalculating intersecting triangles! (CPU)" << std::endl;
-	auto start = std::chrono::high_resolution_clock::now(); //start time measurement
 
 	float* vert1_1;
 	float* vert1_2;
@@ -237,6 +237,8 @@ void Mesh::triangleTriangleIntersect(std::unique_ptr<Mesh>& innerMesh)
 
 	bool inside = true;
 	int totalIntersections = 0;
+
+	auto start = std::chrono::high_resolution_clock::now(); //start time measurement
 
 	int j = 0;
 	while (j < innerMesh->getNumberOfTriangles() && inside)
@@ -262,7 +264,7 @@ void Mesh::triangleTriangleIntersect(std::unique_ptr<Mesh>& innerMesh)
 
 				//numberOfIntersections++;
 				inside = false;
-				break;
+				//break;
 			}
 		}
 		j++;

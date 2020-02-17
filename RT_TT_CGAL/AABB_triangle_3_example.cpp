@@ -79,8 +79,6 @@ int main()
 		std::cout << "# triangles: " << triangleMesh_Outside.size() << std::endl;
 		std::cout << "# vertices: " << triangleMesh_Inside.size() << std::endl;
 
-		auto t1 = std::chrono::high_resolution_clock::now(); //start time measurement
-
 		// constructs AABB tree
 		Tree tree(triangleMesh_Outside.begin(), triangleMesh_Outside.end());
 
@@ -92,6 +90,9 @@ int main()
 		int counter = 0;
 		bool inside = true;
 		int numberOfIntersections;
+
+		auto t1 = std::chrono::high_resolution_clock::now(); //start time measurement
+
 		for (std::list<Point>::iterator it = triangleMesh_Inside.begin(); it != triangleMesh_Inside.end(); ++it) {
 			//std::cout << (*it)[0] << ", " << (*it)[1] << ", " << (*it)[2] << ", " << std::endl;
 			Ray ray_query(*it, direction);
@@ -100,7 +101,7 @@ int main()
 			//std::cout << "numberOfIntersections: " << numberOfIntersections << std::endl;
 			if (numberOfIntersections % 2 == 0) {
 				inside = false;
-				break;
+				//break;
 			}
 			//counter += numberOfIntersections;
 		}
@@ -139,8 +140,6 @@ int main()
 		std::cout << "# triangles outer mesh: " << triangleMesh_Outside.size() << std::endl;
 		std::cout << "# triangles inner mesh: " << triangleMesh_Inside.size() << std::endl;
 
-		auto t1 = std::chrono::high_resolution_clock::now(); //start time measurement
-
 		// constructs AABB tree
 		Tree tree(triangleMesh_Outside.begin(), triangleMesh_Outside.end());
 
@@ -148,8 +147,11 @@ int main()
 		int counter = 0;
 		bool inside = true;
 		bool intersection;
+
+		auto t1 = std::chrono::high_resolution_clock::now(); //start time measurement
+
 		std::list<Triangle>::iterator it = triangleMesh_Inside.begin();
-		while (it != triangleMesh_Inside.end() && inside) {
+		while (it != triangleMesh_Inside.end()) { // && inside
 			//std::cout << (*it)[0] << ", " << (*it)[1] << ", " << (*it)[2] << ", " << std::endl;
 			//std::cout << tree.number_of_intersected_primitives(ray_query) << " intersections(s) with ray query" << std::endl;
 			intersection = tree.do_intersect(*it);

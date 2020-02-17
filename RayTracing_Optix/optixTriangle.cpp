@@ -595,6 +595,8 @@ int main( int argc, char* argv[] )
 			
             output_buffer.unmap();
 
+			auto end = std::chrono::high_resolution_clock::now(); //stop time measurement
+
 			bool inside = true;
 			uchar1* hopeloos = output_buffer.getHostPointer();
 			int teller = 0;
@@ -607,8 +609,8 @@ int main( int argc, char* argv[] )
 				}
 			}
 
+			
 			std::cout << "--- End Calculating ---" << std::endl;
-			auto end = std::chrono::high_resolution_clock::now(); //stop time measurement
 			auto calculatingDuration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
 			std::cout << "\t\t\tTime Calculating = " << calculatingDuration << " microseconds" << std::endl;
 

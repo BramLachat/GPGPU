@@ -27,6 +27,8 @@ void writeResultsToFile(std::vector<std::string>& result);
 /* Console output wegschrijven naar file*/
 std::vector<std::string> output;
 
+cudaEvent_t start_event, stop_event;
+
 int main(int argc, char* argv[]) {
 	//output.push_back(";RT_v1(BPO);;RT_v2(TPO);;RT_v3(TPT);;TT_v1(TPIT);;TT_v2(BPIT);;TT_v3(TPOT);\n");
 
@@ -84,6 +86,9 @@ int main(int argc, char* argv[]) {
 	float direction[3] = { xCenter, yCenter, zCenter };
 
 	std::cout << "direction = " << direction[0] << ", " << direction[1] << ", " << direction[2] << std::endl;
+
+	cudaEventCreate(&start_event);
+	cudaEventCreate(&stop_event);
 
 	//triangleMesh_Outside->rayTriangleIntersectOpenMP(direction, triangleMesh_Inside); // CPU version
 	//triangleMesh_Outside->rayTriangleIntersect(direction, triangleMesh_Inside); // CPU version
@@ -157,20 +162,19 @@ void rayTriangle_BlockPerOrigin(float dir[3], std::unique_ptr<Mesh>& innerMesh, 
 	transferDuration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
 	std::cout << "\t\t\tTime Data Transfer = " << transferDuration << "ms" << std::endl;
 
-	std::cout << "--- Calculating ---" << std::endl;
-	start = std::chrono::high_resolution_clock::now(); //start time measurement
+	cudaEventRecord(start_event);
+	intersect_triangleGPU_BlockPerOrigin<<<numberOfInsideVertices,128>>>(cudaInsideOrigins, cudaDir, cudaOutsideTriangles, cudaOutsideVertices, numberOfOutsideTriangles, cudaInside);
+	cudaEventRecord(stop_event);
 
-	int numberOfBlocks = numberOfInsideVertices;
-	intersect_triangleGPU_BlockPerOrigin<<<numberOfBlocks,128>>>(cudaInsideOrigins, cudaDir, cudaOutsideTriangles, cudaOutsideVertices, numberOfOutsideTriangles, cudaInside);
 	cudaError_t err = cudaGetLastError();
 	handleCudaError(err);
 
 	handleCudaError(cudaMemcpy(inside, cudaInside, sizeof(bool), cudaMemcpyDeviceToHost));
+	cudaEventSynchronize(stop_event);
 
-	std::cout << "--- End Calculating ---" << std::endl;
-	end = std::chrono::high_resolution_clock::now(); //stop time measurement
-	auto calculatingDuration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-	std::cout << "\t\t\tTime Calculating = " << calculatingDuration << " microseconds" << std::endl;
+	float milliseconds = 0;
+	cudaEventElapsedTime(&milliseconds, start_event, stop_event);
+	std::cout << "\t\t\tTime Calculating = " << milliseconds << " milliseconds" << std::endl;
 	
 	cudaFree(cudaInsideOrigins);
 	cudaFree(cudaDir);
@@ -187,7 +191,7 @@ void rayTriangle_BlockPerOrigin(float dir[3], std::unique_ptr<Mesh>& innerMesh, 
 	if (*inside) { result = "INSIDE"; }
 	else { result = "OUTSIDE"; }
 	std::cout << result << std::endl;
-	output.push_back(std::to_string(calculatingDuration) + ";" + result + ";");
+	output.push_back(std::to_string(milliseconds) + ";" + result + ";");
 
 	delete inside;
 }
@@ -243,20 +247,19 @@ void rayTriangle_ThreadPerOrigin(float dir[3], std::unique_ptr<Mesh>& innerMesh,
 	transferDuration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
 	std::cout << "\t\t\tTime Data Transfer = " << transferDuration << "ms" << std::endl;
 
-	std::cout << "--- Calculating ---" << std::endl;
-	start = std::chrono::high_resolution_clock::now(); //start time measurement
+	cudaEventRecord(start_event);
+	intersect_triangleGPU_ThreadPerOrigin<<<(numberOfInsideVertices+511)/512,512>>>(cudaInsideOrigins, cudaDir, cudaOutsideTriangles, cudaOutsideVertices, numberOfInsideVertices, numberOfOutsideTriangles, cudaInside);
+	cudaEventRecord(stop_event);
 
-	int numberOfBlocks = ((int)((numberOfInsideVertices + 511) / 512));
-	intersect_triangleGPU_ThreadPerOrigin<<<numberOfBlocks,512>>>(cudaInsideOrigins, cudaDir, cudaOutsideTriangles, cudaOutsideVertices, numberOfInsideVertices, numberOfOutsideTriangles, cudaInside);
 	cudaError_t err = cudaGetLastError();
 	handleCudaError(err);
 
 	handleCudaError(cudaMemcpy(inside, cudaInside, sizeof(bool), cudaMemcpyDeviceToHost));
+	cudaEventSynchronize(stop_event);
 
-	std::cout << "--- End Calculating ---" << std::endl;
-	end = std::chrono::high_resolution_clock::now(); //stop time measurement
-	auto calculatingDuration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-	std::cout << "\t\t\tTime Calculating = " << calculatingDuration << " microseconds" << std::endl;
+	float milliseconds = 0;
+	cudaEventElapsedTime(&milliseconds, start_event, stop_event);
+	std::cout << "\t\t\tTime Calculating = " << milliseconds << " milliseconds" << std::endl;
 	
 	cudaFree(cudaInsideOrigins);
 	cudaFree(cudaDir);
@@ -273,7 +276,7 @@ void rayTriangle_ThreadPerOrigin(float dir[3], std::unique_ptr<Mesh>& innerMesh,
 	if (*inside) { result = "INSIDE"; }
 	else { result = "OUTSIDE"; }
 	std::cout << result << std::endl;
-	output.push_back(std::to_string(calculatingDuration) + ";" + result + ";");
+	output.push_back(std::to_string(milliseconds) + ";" + result + ";");
 
 	delete inside;
 }
@@ -327,15 +330,15 @@ void rayTriangle_ThreadPerTriangle(float dir[3], std::unique_ptr<Mesh>& innerMes
 	transferDuration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
 	std::cout << "\t\t\tTime Data Transfer = " << transferDuration << " milliseconds" << std::endl;
 
-	std::cout << "--- Calculating ---" << std::endl;
-	start = std::chrono::high_resolution_clock::now(); //start time measurement
+	cudaEventRecord(start_event);
+	intersect_triangleGPU_ThreadPerTriangle<<<(numberOfOutsideTriangles+127)/128,128>>>(cudaInsideOrigins, cudaDir, cudaOutsideTriangles, cudaOutsideVertices, numberOfInsideVertices, numberOfOutsideTriangles, cudaIntersectionsPerOrigin);
+	cudaEventRecord(stop_event);
 
-	int numberOfBlocks = ((int)((numberOfOutsideTriangles + 127) / 128));
-	intersect_triangleGPU_ThreadPerTriangle<<<numberOfBlocks,128>>>(cudaInsideOrigins, cudaDir, cudaOutsideTriangles, cudaOutsideVertices, numberOfInsideVertices, numberOfOutsideTriangles, cudaIntersectionsPerOrigin);
 	cudaError_t err = cudaGetLastError();
 	handleCudaError(err);
 
 	handleCudaError(cudaMemcpy(intersectionsPerOrigin, cudaIntersectionsPerOrigin, numberOfInsideVertices * sizeof(int), cudaMemcpyDeviceToHost));
+	cudaEventSynchronize(stop_event);
 
 	int i = 0;
 	while (i < numberOfInsideVertices && inside)
@@ -346,10 +349,9 @@ void rayTriangle_ThreadPerTriangle(float dir[3], std::unique_ptr<Mesh>& innerMes
 		i++;
 	}
 
-	std::cout << "--- End Calculating ---" << std::endl;
-	end = std::chrono::high_resolution_clock::now(); //stop time measurement
-	auto calculatingDuration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-	std::cout << "\t\t\tTime Calculating = " << calculatingDuration << " microseconds" << std::endl;
+	float milliseconds = 0;
+	cudaEventElapsedTime(&milliseconds, start_event, stop_event);
+	std::cout << "\t\t\tTime Calculating = " << milliseconds << " milliseconds" << std::endl;
 
 	for (int i = 0; i < numberOfInsideVertices; i++)
 	{
@@ -373,7 +375,7 @@ void rayTriangle_ThreadPerTriangle(float dir[3], std::unique_ptr<Mesh>& innerMes
 	if (inside) { result = "INSIDE"; }
 	else { result = "OUTSIDE"; }
 	std::cout << result << std::endl;
-	output.push_back(std::to_string(calculatingDuration) + ";" + result + ";");
+	output.push_back(std::to_string(milliseconds) + ";" + result + ";");
 }
 
 void TriangleTriangle_ThreadPerInnerTriangle(std::unique_ptr<Mesh>& innerMesh, std::unique_ptr<Mesh>& outerMesh)
@@ -447,24 +449,22 @@ void TriangleTriangle_ThreadPerInnerTriangle(std::unique_ptr<Mesh>& innerMesh, s
 	/****************************************************************************
 	Uitvoeren CUDA kernel - Triangle Triangle met Broad Phase Collision Detection
 	*****************************************************************************/
-	std::cout << "--- Calculating ---" << std::endl;
-	start = std::chrono::high_resolution_clock::now(); //start time measurement
-
 	/* Uitvoeren CUDA kernel*/
-	int numberOfBlocks = ((int)((numberOfInsideTriangles + 511) / 512));
+	cudaEventRecord(start_event);
+	triangle_triangle_GPU_BPCD_ThreadPerInnerTriangle<<<(numberOfInsideTriangles+511)/512,512>>>(cudaInsideTriangles, cudaInsideVertices, cudaOutsideTriangles, cudaOutsideVertices, cudaInside, numberOfInsideTriangles, numberOfOutsideTriangles, cudaOutsideTriangleIntervals);
+	cudaEventRecord(stop_event);
 
-	triangle_triangle_GPU_BPCD_ThreadPerInnerTriangle<<<numberOfBlocks,512>>>(cudaInsideTriangles, cudaInsideVertices, cudaOutsideTriangles, cudaOutsideVertices, cudaInside, numberOfInsideTriangles, numberOfOutsideTriangles, cudaOutsideTriangleIntervals);
 	cudaError_t err = cudaGetLastError();
 	handleCudaError(err);
 
 	/* Kopiëren van de resultaten van GPU naar CPU*/
 	//handleCudaError(cudaMemcpy(intersectionsPerInsideTriangle, cudaIntersectionsPerInsideTriangle, numberOfInsideTriangles * sizeof(int), cudaMemcpyDeviceToHost));
 	handleCudaError(cudaMemcpy(inside, cudaInside, sizeof(bool), cudaMemcpyDeviceToHost));
+	cudaEventSynchronize(stop_event);
 
-	std::cout << "--- End Calculating ---" << std::endl;
-	end = std::chrono::high_resolution_clock::now(); //stop time measurement
-	auto calculatingDuration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-	std::cout << "\t\t\tTime Calculating (BPCD) = " << calculatingDuration << " microseconds" << std::endl;
+	float milliseconds = 0;
+	cudaEventElapsedTime(&milliseconds, start_event, stop_event);
+	std::cout << "\t\t\tTime Calculating = " << milliseconds << " milliseconds" << std::endl;
 
 	std::cout << "totaal intersecties: " << totalIntersections << std::endl;
 	if (*inside) {
@@ -477,24 +477,22 @@ void TriangleTriangle_ThreadPerInnerTriangle(std::unique_ptr<Mesh>& innerMesh, s
 	/*******************************************************************************
 	Uitvoeren CUDA kernel - Triangle Triangle zonder Broad Phase Collision Detection
 	********************************************************************************/
-	std::cout << "--- Calculating ---" << std::endl;
-	start = std::chrono::high_resolution_clock::now(); //start time measurement
-
 	/* Uitvoeren CUDA kernel*/
-	numberOfBlocks = ((int)((numberOfInsideTriangles + 511) / 512));
+	cudaEventRecord(start_event);
+	triangle_triangle_GPU_ThreadPerInnerTriangle<<<(numberOfInsideTriangles+511)/512,512>>>(cudaInsideTriangles, cudaInsideVertices, cudaOutsideTriangles, cudaOutsideVertices, cudaInside, numberOfInsideTriangles, numberOfOutsideTriangles);
+	cudaEventRecord(stop_event);
 
-	triangle_triangle_GPU_ThreadPerInnerTriangle<<<numberOfBlocks,512>>>(cudaInsideTriangles, cudaInsideVertices, cudaOutsideTriangles, cudaOutsideVertices, cudaInside, numberOfInsideTriangles, numberOfOutsideTriangles);
 	err = cudaGetLastError();
 	handleCudaError(err);
 
 	/* Kopiëren van de resultaten van GPU naar CPU*/
 	//handleCudaError(cudaMemcpy(intersectionsPerInsideTriangle, cudaIntersectionsPerInsideTriangle, numberOfInsideTriangles * sizeof(int), cudaMemcpyDeviceToHost));
 	handleCudaError(cudaMemcpy(inside, cudaInside, sizeof(bool), cudaMemcpyDeviceToHost));
+	cudaEventSynchronize(stop_event);
 
-	std::cout << "--- End Calculating ---" << std::endl;
-	end = std::chrono::high_resolution_clock::now(); //stop time measurement
-	calculatingDuration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-	std::cout << "\t\t\tTime Calculating = " << calculatingDuration << " microseconds" << std::endl;
+	milliseconds = 0;
+	cudaEventElapsedTime(&milliseconds, start_event, stop_event);
+	std::cout << "\t\t\tTime Calculating = " << milliseconds << " milliseconds" << std::endl;
 
 	std::string result;
 	std::cout << "totaal intersecties: " << totalIntersections << std::endl;
@@ -505,7 +503,7 @@ void TriangleTriangle_ThreadPerInnerTriangle(std::unique_ptr<Mesh>& innerMesh, s
 		result = "SNIJDEN WEL";
 	}
 	std::cout << result << std::endl;
-	output.push_back(std::to_string(calculatingDuration) + ";" + result + ";");
+	output.push_back(std::to_string(milliseconds) + ";" + result + ";");
 
 	cudaFree(cudaInsideTriangles);
 	cudaFree(cudaInsideVertices);
@@ -594,24 +592,22 @@ void TriangleTriangle_BlockPerInnerTriangle(std::unique_ptr<Mesh>& innerMesh, st
 	/****************************************************************************
 	Uitvoeren CUDA kernel - Triangle Triangle met Broad Phase Collision Detection
 	*****************************************************************************/
-	std::cout << "--- Calculating ---" << std::endl;
-	start = std::chrono::high_resolution_clock::now(); //start time measurement
-
 	/* Uitvoeren CUDA kernel*/
-	int numberOfBlocks = numberOfInsideTriangles;
+	cudaEventRecord(start_event);
+	triangle_triangle_GPU_BPCD_BlockPerInnerTriangle<<<numberOfInsideTriangles,128>>>(cudaInsideTriangles, cudaInsideVertices, cudaOutsideTriangles, cudaOutsideVertices, cudaInside, numberOfInsideTriangles, numberOfOutsideTriangles, cudaOutsideTriangleIntervals);
+	cudaEventRecord(stop_event);
 
-	triangle_triangle_GPU_BPCD_BlockPerInnerTriangle<<<numberOfBlocks,128>>>(cudaInsideTriangles, cudaInsideVertices, cudaOutsideTriangles, cudaOutsideVertices, cudaInside, numberOfInsideTriangles, numberOfOutsideTriangles, cudaOutsideTriangleIntervals);
 	cudaError_t err = cudaGetLastError();
 	handleCudaError(err);
 
 	/* Kopiëren van de resultaten van GPU naar CPU*/
 	//handleCudaError(cudaMemcpy(intersectionsPerInsideTriangle, cudaIntersectionsPerInsideTriangle, numberOfInsideTriangles * sizeof(int), cudaMemcpyDeviceToHost));
 	handleCudaError(cudaMemcpy(inside, cudaInside, sizeof(bool), cudaMemcpyDeviceToHost));
+	cudaEventSynchronize(stop_event);
 
-	std::cout << "--- End Calculating ---" << std::endl;
-	end = std::chrono::high_resolution_clock::now(); //stop time measurement
-	auto calculatingDuration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-	std::cout << "\t\t\tTime Calculating (BPCD) = " << calculatingDuration << " microseconds" << std::endl;
+	float milliseconds = 0;
+	cudaEventElapsedTime(&milliseconds, start_event, stop_event);
+	std::cout << "\t\t\tTime Calculating = " << milliseconds << " milliseconds" << std::endl;
 
 	std::cout << "totaal intersecties: " << totalIntersections << std::endl;
 	if (*inside) {
@@ -624,24 +620,22 @@ void TriangleTriangle_BlockPerInnerTriangle(std::unique_ptr<Mesh>& innerMesh, st
 	/*******************************************************************************
 	Uitvoeren CUDA kernel - Triangle Triangle zonder Broad Phase Collision Detection
 	********************************************************************************/
-	std::cout << "--- Calculating ---" << std::endl;
-	start = std::chrono::high_resolution_clock::now(); //start time measurement
-
 	/* Uitvoeren CUDA kernel*/
-	numberOfBlocks = numberOfInsideTriangles;
+	cudaEventRecord(start_event);
+	triangle_triangle_GPU_BlockPerInnerTriangle<<<numberOfInsideTriangles,128>>>(cudaInsideTriangles, cudaInsideVertices, cudaOutsideTriangles, cudaOutsideVertices, cudaInside, numberOfInsideTriangles, numberOfOutsideTriangles);
+	cudaEventRecord(stop_event);
 
-	triangle_triangle_GPU_BlockPerInnerTriangle<<<numberOfBlocks,128>>>(cudaInsideTriangles, cudaInsideVertices, cudaOutsideTriangles, cudaOutsideVertices, cudaInside, numberOfInsideTriangles, numberOfOutsideTriangles);
 	err = cudaGetLastError();
 	handleCudaError(err);
 
 	/* Kopiëren van de resultaten van GPU naar CPU*/
 	//handleCudaError(cudaMemcpy(intersectionsPerInsideTriangle, cudaIntersectionsPerInsideTriangle, numberOfInsideTriangles * sizeof(int), cudaMemcpyDeviceToHost));
 	handleCudaError(cudaMemcpy(inside, cudaInside, sizeof(bool), cudaMemcpyDeviceToHost));
+	cudaEventSynchronize(stop_event);
 
-	std::cout << "--- End Calculating ---" << std::endl;
-	end = std::chrono::high_resolution_clock::now(); //stop time measurement
-	calculatingDuration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-	std::cout << "\t\t\tTime Calculating = " << calculatingDuration << " microseconds" << std::endl;
+	milliseconds = 0;
+	cudaEventElapsedTime(&milliseconds, start_event, stop_event);
+	std::cout << "\t\t\tTime Calculating = " << milliseconds << " milliseconds" << std::endl;
 
 	std::string result;
 	std::cout << "totaal intersecties: " << totalIntersections << std::endl;
@@ -652,7 +646,7 @@ void TriangleTriangle_BlockPerInnerTriangle(std::unique_ptr<Mesh>& innerMesh, st
 		result = "SNIJDEN WEL";
 	}
 	std::cout << result << std::endl;
-	output.push_back(std::to_string(calculatingDuration) + ";" + result + ";");
+	output.push_back(std::to_string(milliseconds) + ";" + result + ";");
 
 	cudaFree(cudaInsideTriangles);
 	cudaFree(cudaInsideVertices);
@@ -741,23 +735,22 @@ void TriangleTriangle_ThreadPerOuterTriangle(std::unique_ptr<Mesh>& innerMesh, s
 	/****************************************************************************
 	Uitvoeren CUDA kernel - Triangle Triangle met Broad Phase Collision Detection
 	*****************************************************************************/
-	std::cout << "--- Calculating ---" << std::endl;
-	start = std::chrono::high_resolution_clock::now(); //start time measurement
-
 	/* Uitvoeren CUDA kernel*/
-	int numberOfBlocks = ((int)((numberOfOutsideTriangles + 511) / 512));
-	triangle_triangle_GPU_BPCD_ThreadPerOuterTriangle<<<numberOfBlocks,512>>>(cudaInsideTriangles, cudaInsideVertices, cudaOutsideTriangles, cudaOutsideVertices, cudaInside, numberOfInsideTriangles, numberOfOutsideTriangles, cudaInsideTriangleIntervals);
+	cudaEventRecord(start_event);
+	triangle_triangle_GPU_BPCD_ThreadPerOuterTriangle<<<(numberOfOutsideTriangles+511)/512,512>>>(cudaInsideTriangles, cudaInsideVertices, cudaOutsideTriangles, cudaOutsideVertices, cudaInside, numberOfInsideTriangles, numberOfOutsideTriangles, cudaInsideTriangleIntervals);
+	cudaEventRecord(stop_event);
+
 	cudaError_t err = cudaGetLastError();
 	handleCudaError(err);
 
 	/* Kopiëren van de resultaten van GPU naar CPU*/
 	//handleCudaError(cudaMemcpy(intersectionsPerInsideTriangle, cudaIntersectionsPerInsideTriangle, numberOfInsideTriangles * sizeof(int), cudaMemcpyDeviceToHost));
 	handleCudaError(cudaMemcpy(inside, cudaInside, sizeof(bool), cudaMemcpyDeviceToHost));
+	cudaEventSynchronize(stop_event);
 
-	std::cout << "--- End Calculating ---" << std::endl;
-	end = std::chrono::high_resolution_clock::now(); //stop time measurement
-	auto calculatingDuration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-	std::cout << "\t\t\tTime Calculating (BPCD) = " << calculatingDuration << " microseconds" << std::endl;
+	float milliseconds = 0;
+	cudaEventElapsedTime(&milliseconds, start_event, stop_event);
+	std::cout << "\t\t\tTime Calculating = " << milliseconds << " milliseconds" << std::endl;
 
 	std::cout << "totaal intersecties: " << totalIntersections << std::endl;
 	if (*inside) {
@@ -770,23 +763,22 @@ void TriangleTriangle_ThreadPerOuterTriangle(std::unique_ptr<Mesh>& innerMesh, s
 	/*******************************************************************************
 	Uitvoeren CUDA kernel - Triangle Triangle zonder Broad Phase Collision Detection
 	********************************************************************************/
-	std::cout << "--- Calculating ---" << std::endl;
-	start = std::chrono::high_resolution_clock::now(); //start time measurement
-
 	/* Uitvoeren CUDA kernel*/
-	numberOfBlocks = ((int)((numberOfOutsideTriangles + 511) / 512));
-	triangle_triangle_GPU_ThreadPerOuterTriangle<<<numberOfBlocks,512>>>(cudaInsideTriangles, cudaInsideVertices, cudaOutsideTriangles, cudaOutsideVertices, cudaInside, numberOfInsideTriangles, numberOfOutsideTriangles);
+	cudaEventRecord(start_event);
+	triangle_triangle_GPU_ThreadPerOuterTriangle<<<(numberOfOutsideTriangles+511)/512,512>>>(cudaInsideTriangles, cudaInsideVertices, cudaOutsideTriangles, cudaOutsideVertices, cudaInside, numberOfInsideTriangles, numberOfOutsideTriangles);
+	cudaEventRecord(stop_event);
+
 	err = cudaGetLastError();
 	handleCudaError(err);
 
 	/* Kopiëren van de resultaten van GPU naar CPU*/
 	//handleCudaError(cudaMemcpy(intersectionsPerInsideTriangle, cudaIntersectionsPerInsideTriangle, numberOfInsideTriangles * sizeof(int), cudaMemcpyDeviceToHost));
 	handleCudaError(cudaMemcpy(inside, cudaInside, sizeof(bool), cudaMemcpyDeviceToHost));
+	cudaEventSynchronize(stop_event);
 
-	std::cout << "--- End Calculating ---" << std::endl;
-	end = std::chrono::high_resolution_clock::now(); //stop time measurement
-	calculatingDuration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-	std::cout << "\t\t\tTime Calculating = " << calculatingDuration << " microseconds" << std::endl;
+	milliseconds = 0;
+	cudaEventElapsedTime(&milliseconds, start_event, stop_event);
+	std::cout << "\t\t\tTime Calculating = " << milliseconds << " milliseconds" << std::endl;
 
 	std::string result;
 	std::cout << "totaal intersecties: " << totalIntersections << std::endl;
@@ -797,7 +789,7 @@ void TriangleTriangle_ThreadPerOuterTriangle(std::unique_ptr<Mesh>& innerMesh, s
 		result = "SNIJDEN WEL";
 	}
 	std::cout << result << std::endl;
-	output.push_back(std::to_string(calculatingDuration) + ";" + result + "\n");
+	output.push_back(std::to_string(milliseconds) + ";" + result + "\n");
 
 	cudaFree(cudaInsideTriangles);
 	cudaFree(cudaInsideVertices);
