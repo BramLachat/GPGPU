@@ -19,7 +19,7 @@
 
 '...L(.stl)' staat voor Large = Dit zijn de vergrote versies.
 
-'...T(.stl)' staat voor Transferred = Dit zijn de verschoven versies.
+'...T(.stl)' staat voor Translated = Dit zijn de verschoven versies.
 
 ### Screenshot:
 ![Screenshot](/Screenshot.jpg?raw=true "Input example")
