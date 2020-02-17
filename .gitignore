@@ -40,3 +40,17 @@ OptiX.lnk
 TriangleTriangle_v2/.vs/
 TriangleTriangle_v2/bin/
 TriangleTriangle_v2/x64/
+All_Versions/.vs/
+All_Versions/bin/
+All_Versions/x64/
+OpenMP/RayTriangle_OpenMP/.vs/
+OpenMP/RayTriangle_OpenMP/bin/
+OpenMP/RayTriangle_OpenMP/x64/
+RayTriangleGPU_v7/.vs/
+RayTriangleGPU_v7/bin/
+RayTriangleGPU_v7/x64/
+TriangleTriangle_v3/.vs/
+TriangleTriangle_v3/bin/
+TriangleTriangle_v3/x64/
+Meshes_Extended/
+Varia/
