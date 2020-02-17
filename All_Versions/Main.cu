@@ -27,20 +27,25 @@ void writeResultsToFile(std::vector<std::string>& result);
 /* Console output wegschrijven naar file*/
 std::vector<std::string> output;
 
-std::string algoritme;
-std::string CPU_GPU;
-std::string versie;
-std::string ST_MT; //SingleThreaded of MultiThreaded (in het geval van CPU)
-
 int main(int argc, char* argv[]) {
+	//output.push_back(";RT_v1(BPO);;RT_v2(TPO);;RT_v3(TPT);;TT_v1(TPIT);;TT_v2(BPIT);;TT_v3(TPOT);\n");
+
 	std::string stl_file_inside;
 	std::string stl_file_outside;
 	std::cout << "Enter filename of inside mesh:" << std::endl;
 	std::cin >> stl_file_inside;
-	output.push_back(stl_file_inside);
+
+	std::string delimiter = ".stl";
+	std::string token = stl_file_inside.substr(28, stl_file_inside.find(delimiter));
+	token = token.substr(0, token.find(delimiter));
+	output.push_back(token + "-");
+
 	std::cout << "Enter filename of outside mesh:" << std::endl;
 	std::cin >> stl_file_outside;
-	output.push_back(stl_file_outside);
+
+	token = stl_file_outside.substr(28, stl_file_outside.find(delimiter));
+	token = token.substr(0, token.find(delimiter));
+	output.push_back(token + ";");
 
 	if (argc == 2) {
 		stl_file_inside = argv[1];
@@ -80,18 +85,20 @@ int main(int argc, char* argv[]) {
 
 	std::cout << "direction = " << direction[0] << ", " << direction[1] << ", " << direction[2] << std::endl;
 
-	triangleMesh_Outside->rayTriangleIntersectOpenMP(direction, triangleMesh_Inside); // CPU version
-	triangleMesh_Outside->rayTriangleIntersect(direction, triangleMesh_Inside); // CPU version
+	//triangleMesh_Outside->rayTriangleIntersectOpenMP(direction, triangleMesh_Inside); // CPU version
+	//triangleMesh_Outside->rayTriangleIntersect(direction, triangleMesh_Inside); // CPU version
 
 	rayTriangle_BlockPerOrigin(direction, triangleMesh_Inside, triangleMesh_Outside);
 	rayTriangle_ThreadPerOrigin(direction, triangleMesh_Inside, triangleMesh_Outside);
 	rayTriangle_ThreadPerTriangle(direction, triangleMesh_Inside, triangleMesh_Outside);
 
-	triangleMesh_Outside->triangleTriangleIntersect(triangleMesh_Inside);
+	//triangleMesh_Outside->triangleTriangleIntersect(triangleMesh_Inside);
 
 	TriangleTriangle_ThreadPerInnerTriangle(triangleMesh_Inside, triangleMesh_Outside); // GPU version
 	TriangleTriangle_BlockPerInnerTriangle(triangleMesh_Inside, triangleMesh_Outside); // GPU version
 	TriangleTriangle_ThreadPerOuterTriangle(triangleMesh_Inside, triangleMesh_Outside); // GPU version
+
+	writeResultsToFile(output);
 
 	std::cout << "Press Enter to quit program!" << std::endl;
 	std::cin.get();
@@ -174,10 +181,13 @@ void rayTriangle_BlockPerOrigin(float dir[3], std::unique_ptr<Mesh>& innerMesh, 
 	cudaFreeHost(insideOrigins);
 	cudaFreeHost(outsideTriangles);
 	cudaFreeHost(outsideVertices);
-	
+
+	std::string result;
 	std::cout << "totaal intersecties: " << totalIntersections << std::endl;
-	if (*inside) { std::cout << "INSIDE" << std::endl; }
-	else { std::cout << "OUTSIDE" << std::endl; }
+	if (*inside) { result = "INSIDE"; }
+	else { result = "OUTSIDE"; }
+	std::cout << result << std::endl;
+	output.push_back(std::to_string(calculatingDuration) + ";" + result + ";");
 
 	delete inside;
 }
@@ -258,9 +268,12 @@ void rayTriangle_ThreadPerOrigin(float dir[3], std::unique_ptr<Mesh>& innerMesh,
 	cudaFreeHost(outsideTriangles);
 	cudaFreeHost(outsideVertices);
 	
+	std::string result;
 	std::cout << "totaal intersecties: " << totalIntersections << std::endl;
-	if (*inside) { std::cout << "INSIDE" << std::endl; }
-	else { std::cout << "OUTSIDE" << std::endl; }
+	if (*inside) { result = "INSIDE"; }
+	else { result = "OUTSIDE"; }
+	std::cout << result << std::endl;
+	output.push_back(std::to_string(calculatingDuration) + ";" + result + ";");
 
 	delete inside;
 }
@@ -355,9 +368,12 @@ void rayTriangle_ThreadPerTriangle(float dir[3], std::unique_ptr<Mesh>& innerMes
 
 	delete intersectionsPerOrigin;
 
+	std::string result;
 	std::cout << "totaal intersecties: " << totalIntersections << std::endl;
-	if (inside) { std::cout << "INSIDE" << std::endl; }
-	else { std::cout << "OUTSIDE" << std::endl; }
+	if (inside) { result = "INSIDE"; }
+	else { result = "OUTSIDE"; }
+	std::cout << result << std::endl;
+	output.push_back(std::to_string(calculatingDuration) + ";" + result + ";");
 }
 
 void TriangleTriangle_ThreadPerInnerTriangle(std::unique_ptr<Mesh>& innerMesh, std::unique_ptr<Mesh>& outerMesh)
@@ -480,13 +496,16 @@ void TriangleTriangle_ThreadPerInnerTriangle(std::unique_ptr<Mesh>& innerMesh, s
 	calculatingDuration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
 	std::cout << "\t\t\tTime Calculating = " << calculatingDuration << " microseconds" << std::endl;
 
+	std::string result;
 	std::cout << "totaal intersecties: " << totalIntersections << std::endl;
 	if (*inside) {
-		std::cout << "SNIJDEN NIET" << std::endl;
+		result = "SNIJDEN NIET";
 	}
 	else {
-		std::cout << "SNIJDEN WEL" << std::endl;
+		result = "SNIJDEN WEL";
 	}
+	std::cout << result << std::endl;
+	output.push_back(std::to_string(calculatingDuration) + ";" + result + ";");
 
 	cudaFree(cudaInsideTriangles);
 	cudaFree(cudaInsideVertices);
@@ -594,16 +613,12 @@ void TriangleTriangle_BlockPerInnerTriangle(std::unique_ptr<Mesh>& innerMesh, st
 	auto calculatingDuration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
 	std::cout << "\t\t\tTime Calculating (BPCD) = " << calculatingDuration << " microseconds" << std::endl;
 
-	output.push_back("Time Calculating (BPCD) = " + std::to_string(calculatingDuration) + " microseconds");
-
 	std::cout << "totaal intersecties: " << totalIntersections << std::endl;
 	if (*inside) {
 		std::cout << "SNIJDEN NIET" << std::endl;
-		output.push_back("SNIJDEN NIET");
 	}
 	else {
 		std::cout << "SNIJDEN WEL" << std::endl;
-		output.push_back("SNIJDEN WEL");
 	}
 
 	/*******************************************************************************
@@ -628,17 +643,16 @@ void TriangleTriangle_BlockPerInnerTriangle(std::unique_ptr<Mesh>& innerMesh, st
 	calculatingDuration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
 	std::cout << "\t\t\tTime Calculating = " << calculatingDuration << " microseconds" << std::endl;
 
-	output.push_back("Time Calculating = " + std::to_string(calculatingDuration) + " microseconds");
-
+	std::string result;
 	std::cout << "totaal intersecties: " << totalIntersections << std::endl;
 	if (*inside) {
-		std::cout << "SNIJDEN NIET" << std::endl;
-		output.push_back("SNIJDEN NIET");
+		result = "SNIJDEN NIET";
 	}
 	else {
-		std::cout << "SNIJDEN WEL" << std::endl;
-		output.push_back("SNIJDEN WEL");
+		result = "SNIJDEN WEL";
 	}
+	std::cout << result << std::endl;
+	output.push_back(std::to_string(calculatingDuration) + ";" + result + ";");
 
 	cudaFree(cudaInsideTriangles);
 	cudaFree(cudaInsideVertices);
@@ -655,8 +669,6 @@ void TriangleTriangle_BlockPerInnerTriangle(std::unique_ptr<Mesh>& innerMesh, st
 	//delete intersectionsPerInsideTriangle;
 
 	delete inside;
-
-	writeResultsToFile(output);
 }
 
 void TriangleTriangle_ThreadPerOuterTriangle(std::unique_ptr<Mesh>& innerMesh, std::unique_ptr<Mesh>& outerMesh)
@@ -747,16 +759,12 @@ void TriangleTriangle_ThreadPerOuterTriangle(std::unique_ptr<Mesh>& innerMesh, s
 	auto calculatingDuration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
 	std::cout << "\t\t\tTime Calculating (BPCD) = " << calculatingDuration << " microseconds" << std::endl;
 
-	output.push_back("Time Calculating (BPCD) = " + std::to_string(calculatingDuration) + " microseconds");
-
 	std::cout << "totaal intersecties: " << totalIntersections << std::endl;
 	if (*inside) {
 		std::cout << "SNIJDEN NIET" << std::endl;
-		output.push_back("SNIJDEN NIET");
 	}
 	else {
 		std::cout << "SNIJDEN WEL" << std::endl;
-		output.push_back("SNIJDEN WEL");
 	}
 
 	/*******************************************************************************
@@ -780,17 +788,16 @@ void TriangleTriangle_ThreadPerOuterTriangle(std::unique_ptr<Mesh>& innerMesh, s
 	calculatingDuration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
 	std::cout << "\t\t\tTime Calculating = " << calculatingDuration << " microseconds" << std::endl;
 
-	output.push_back("Time Calculating = " + std::to_string(calculatingDuration) + " microseconds");
-
+	std::string result;
 	std::cout << "totaal intersecties: " << totalIntersections << std::endl;
 	if (*inside) {
-		std::cout << "SNIJDEN NIET" << std::endl;
-		output.push_back("SNIJDEN NIET");
+		result = "SNIJDEN NIET";
 	}
 	else {
-		std::cout << "SNIJDEN WEL" << std::endl;
-		output.push_back("SNIJDEN WEL");
+		result = "SNIJDEN WEL";
 	}
+	std::cout << result << std::endl;
+	output.push_back(std::to_string(calculatingDuration) + ";" + result + "\n");
 
 	cudaFree(cudaInsideTriangles);
 	cudaFree(cudaInsideVertices);
@@ -807,8 +814,6 @@ void TriangleTriangle_ThreadPerOuterTriangle(std::unique_ptr<Mesh>& innerMesh, s
 	//delete intersectionsPerInsideTriangle;
 
 	delete inside;
-
-	writeResultsToFile(output);
 }
 
 void handleCudaError(cudaError_t cudaERR) {
@@ -824,12 +829,11 @@ __global__ void startGPU() {
 void writeResultsToFile(std::vector<std::string>& result)
 {
 	std::vector<std::string>::iterator itr;
-	std::string path = "output.txt";
+	std::string path = "output.csv";
 	std::ofstream ofs;
 	ofs.open(path, std::ofstream::out | std::ofstream::app);
 	for (itr = result.begin(); itr != result.end(); ++itr)
 	{
-		ofs << (*itr) << "\t";
+		ofs << (*itr);
 	}
-	ofs << "\n";
 }

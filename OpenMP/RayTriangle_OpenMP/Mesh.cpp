@@ -219,6 +219,7 @@ void Mesh::rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh)
 }
 void Mesh::triangleTriangleIntersect(std::unique_ptr<Mesh>& innerMesh)
 {
+	std::cout << "\t\t\tCalculating intersecting triangles! (CPU)" << std::endl;
 	auto start = std::chrono::high_resolution_clock::now(); //start time measurement
 
 	float* vert1_1;
@@ -235,17 +236,17 @@ void Mesh::triangleTriangleIntersect(std::unique_ptr<Mesh>& innerMesh)
 	std::unique_ptr<std::vector<Triangle>> intersectingTriangles2 = std::make_unique<std::vector<Triangle>>();
 
 	bool inside = true;
+	int totalIntersections = 0;
 
-	std::cout << "\t\t\tCalculating intersecting triangles! (CPU)" << std::endl;
-
-	for (int j = 0; j < innerMesh->getNumberOfTriangles(); j++)
+	int j = 0;
+	while (j < innerMesh->getNumberOfTriangles() && inside)
 	{
 		t1 = &(innerMesh->triangles.at(j));
 		vert1_1 = innerVertices->at(t1->getIndexOfVertexInMesh(0)).getCoordinates();
 		vert1_2 = innerVertices->at(t1->getIndexOfVertexInMesh(1)).getCoordinates();
 		vert1_3 = innerVertices->at(t1->getIndexOfVertexInMesh(2)).getCoordinates();
 
-		int numberOfIntersections = 0;
+		//int numberOfIntersections = 0;
 
 		for (int i = 0; i < triangles.size(); i++)
 		{
@@ -256,24 +257,30 @@ void Mesh::triangleTriangleIntersect(std::unique_ptr<Mesh>& innerMesh)
 			if (Intersection::NoDivTriTriIsect(vert1_1, vert1_2, vert1_3, vert2_1, vert2_2, vert2_3) == 1)
 			{
 				//list printed with intersecting triangles
-				intersectingTriangles1->push_back(*t1);
-				intersectingTriangles2->push_back(*t2);
+				//intersectingTriangles1->push_back(*t1);
+				//intersectingTriangles2->push_back(*t2);
 
-				numberOfIntersections++;
+				//numberOfIntersections++;
+				inside = false;
+				break;
 			}
 		}
+		j++;
+		//totalIntersections += numberOfIntersections;
 		//std::cout << "aantal intersecties = " << numberOfIntersections << std::endl;
-		if (numberOfIntersections != 0)
-		{
-			inside = false;
-		}
 	}
-	if (inside) { std::cout << "SNIJDEN NIET" << std::endl; }
-	else { std::cout << "SNIJDEN WEL" << std::endl; }
+	/*if (totalIntersections != 0)
+	{
+		inside = false;
+	}*/
 
 	auto end = std::chrono::high_resolution_clock::now(); //stop time measurement
 	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
 	std::cout << "\t\t\tTime CPU = " << duration << "ms" << std::endl;
+
+	std::cout << "Aantal intersecties: " << totalIntersections << std::endl;
+	if (inside) { std::cout << "SNIJDEN NIET" << std::endl; }
+	else { std::cout << "SNIJDEN WEL" << std::endl; }
 
 	std::cout << "Writing to file!" << std::endl;
 	writeTrianglesToFile(intersectingTriangles1, innerVertices, "IntersectingTriangles1.stl");

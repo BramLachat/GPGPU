@@ -178,7 +178,7 @@
 		int punt2;
 		int punt3;
 		while (threadidx < numberOfTriangles) {
-			if (*inside) {
+			//if (*inside) {
 				punt1 = triangles[threadidx].x;
 				punt2 = triangles[threadidx].y;
 				punt3 = triangles[threadidx].z;
@@ -191,10 +191,10 @@
 					numberOfIntersections += 1;
 				}
 				threadidx += 128;
-			}
+			/*}
 			else {
 				return;
-			}
+			}*/
 		}
 		threadidx = threadIdx.x;
 		intersectionsPerBlock[threadidx] = numberOfIntersections;
@@ -212,7 +212,7 @@
 			if (intersectionsPerBlock[0] % 2 == 0)
 			{
 				*inside = false;
-				return;
+				//return;
 				/*outsideVertices[blockIdx.x].x = orig[0];
 				outsideVertices[blockIdx.x].y = orig[1];
 				outsideVertices[blockIdx.x].z = orig[2];*/
@@ -231,7 +231,7 @@
 			int numberOfIntersections = 0;
 			for (int i = 0; i < numberOfTriangles; i++)
 			{
-				if (*inside) {
+				//if (*inside) {
 					float vert0[3] = { vertices[triangles[i].x].x, vertices[triangles[i].x].y, vertices[triangles[i].x].z };
 					float vert1[3] = { vertices[triangles[i].y].x, vertices[triangles[i].y].y, vertices[triangles[i].y].z };
 					float vert2[3] = { vertices[triangles[i].z].x, vertices[triangles[i].z].y, vertices[triangles[i].z].z };
@@ -240,16 +240,16 @@
 					{
 						numberOfIntersections++;
 					}
-				}
+				/*}
 				else {
 					return;
-				}
+				}*/
 			}
 			//intersectionsPerOrigin[tid] = numberOfIntersections;
 			if (numberOfIntersections % 2 == 0)
 			{
 				*inside = false;
-				return;
+				//return;
 				/*outsideVertices[tid].x = orig[0];
 				outsideVertices[tid].y = orig[1];
 				outsideVertices[tid].z = orig[2];*/
