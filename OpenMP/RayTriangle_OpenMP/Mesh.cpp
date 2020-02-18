@@ -60,20 +60,16 @@ int Mesh::findDuplicate(const Vertex& v)
 		return -1;
 	}*/
 }
-void Mesh::rayTriangleIntersectOpenMP(float dir[3], std::unique_ptr<Mesh>& innerMesh)
+int Mesh::rayTriangleIntersectOpenMP(float dir[3], std::unique_ptr<Mesh>& innerMesh, int number_of_threads)
 {
 	std::vector<Vertex> outermesh_vertices = vertices; //Nodig voor OpenMP
 	std::vector<Triangle> outermesh_triangles = triangles; //Nodig voor OpenMP
 
-	int aantal_threads = 1;
-	std::cout << "Choose the number of threads!" << std::endl;
-	std::cin >> aantal_threads;
-	omp_set_num_threads(aantal_threads);
-	std::cout << "aantal threads: " << omp_get_num_threads() << std::endl;
+	omp_set_num_threads(number_of_threads);
 
 	std::unique_ptr<std::vector<Vertex>> outsideVertices = std::make_unique<std::vector<Vertex>>(innerMesh->getNumberOfVertices());
 	bool inside = true;
-	std::unique_ptr<std::vector<int>> totalIntersections = std::make_unique<std::vector<int>>(aantal_threads);
+	std::unique_ptr<std::vector<int>> totalIntersections = std::make_unique<std::vector<int>>(number_of_threads);
 	int totaalAantalIntersecties = 0;
 
 	auto start = std::chrono::high_resolution_clock::now(); //start time measurement
@@ -141,18 +137,21 @@ void Mesh::rayTriangleIntersectOpenMP(float dir[3], std::unique_ptr<Mesh>& inner
 
 	auto end = std::chrono::high_resolution_clock::now(); //stop time measurement
 	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-	std::cout << "\t\t\tTime CPU = " << duration << "ms" << std::endl;
 
-	std::cout << "totaal intersecties = " << totaalAantalIntersecties << std::endl;
 	if (inside) { std::cout << "INSIDE" << std::endl; }
 	else { std::cout << "OUTSIDE" << std::endl; }
 
-	std::cout << "Writing to file!" << std::endl;
-	writeVerticesToFile(outsideVertices, "OutsideVertices.stl");
+	return (int) duration;
+	//std::cout << "\t\t\tTime CPU = " << duration << "ms" << std::endl;
+
+	//std::cout << "totaal intersecties = " << totaalAantalIntersecties << std::endl;
+
+	//std::cout << "Writing to file!" << std::endl;
+	//writeVerticesToFile(outsideVertices, "OutsideVertices.stl");
 }
-void Mesh::rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh)
+int Mesh::rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh)
 {
-	std::cout << "\t\t\tCalculating intersections! (CPU)" << std::endl;
+	//std::cout << "\t\t\tCalculating intersections! (CPU)" << std::endl;
 
 	//std::unique_ptr<float[]> orig = std::make_unique<float[]>(3); //smart pointer
 	//std::vector<float> orig;
@@ -208,19 +207,22 @@ void Mesh::rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh)
 
 	auto end = std::chrono::high_resolution_clock::now(); //stop time measurement
 	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-	std::cout << "\t\t\tTime CPU = " << duration << "ms" << std::endl;
-
-	std::cout << "totaal intersecties = " << totalIntersections << std::endl;
 	delete t; delete u; delete v;
+
 	if (inside) { std::cout << "INSIDE" << std::endl; }
 	else { std::cout << "OUTSIDE" << std::endl; }
 
-	std::cout << "Writing to file!" << std::endl;
-	writeVerticesToFile(outsideVertices, "OutsideVertices.stl");
+	return (int)duration;
+	//std::cout << "\t\t\tTime CPU = " << duration << "ms" << std::endl;
+
+	//std::cout << "totaal intersecties = " << totalIntersections << std::endl;
+
+	//std::cout << "Writing to file!" << std::endl;
+	//writeVerticesToFile(outsideVertices, "OutsideVertices.stl");
 }
-void Mesh::triangleTriangleIntersect(std::unique_ptr<Mesh>& innerMesh)
+int Mesh::triangleTriangleIntersect(std::unique_ptr<Mesh>& innerMesh)
 {
-	std::cout << "\t\t\tCalculating intersecting triangles! (CPU)" << std::endl;
+	//std::cout << "\t\t\tCalculating intersecting triangles! (CPU)" << std::endl;
 
 	float* vert1_1;
 	float* vert1_2;
@@ -278,15 +280,18 @@ void Mesh::triangleTriangleIntersect(std::unique_ptr<Mesh>& innerMesh)
 
 	auto end = std::chrono::high_resolution_clock::now(); //stop time measurement
 	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-	std::cout << "\t\t\tTime CPU = " << duration << "ms" << std::endl;
 
-	std::cout << "Aantal intersecties: " << totalIntersections << std::endl;
 	if (inside) { std::cout << "SNIJDEN NIET" << std::endl; }
 	else { std::cout << "SNIJDEN WEL" << std::endl; }
 
-	std::cout << "Writing to file!" << std::endl;
-	writeTrianglesToFile(intersectingTriangles1, innerVertices, "IntersectingTriangles1.stl");
-	writeTrianglesToFile(intersectingTriangles2, &vertices, "IntersectingTriangles2.stl");
+	return (int)duration;
+	//std::cout << "\t\t\tTime CPU = " << duration << "ms" << std::endl;
+
+	//std::cout << "Aantal intersecties: " << totalIntersections << std::endl;
+
+	//std::cout << "Writing to file!" << std::endl;
+	//writeTrianglesToFile(intersectingTriangles1, innerVertices, "IntersectingTriangles1.stl");
+	//writeTrianglesToFile(intersectingTriangles2, &vertices, "IntersectingTriangles2.stl");
 }
 int Mesh::getLastVertex()
 {

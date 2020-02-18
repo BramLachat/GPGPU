@@ -1,5 +1,6 @@
 #include <cassert>
 #include <iostream>
+#include <fstream>
 #include <chrono>
 #include <cuda_runtime.h>
 #include <cuda_runtime_api.h>
@@ -10,90 +11,92 @@
 #include "parse_stl.h"
 #include "RayTriangleIntersect.cuh"
 
+void writeResultsToFile(std::vector<std::string>& result);
+
+/* Console output wegschrijven naar file*/
+std::vector<std::string> output;
+
 
 int main(int argc, char* argv[]) {
+	
 	std::string stl_file_inside;
 	std::string stl_file_outside;
-	int RayTriangle;
-	int multiThreading;
 	std::cout << "Enter filename of inside mesh:" << std::endl;
 	std::cin >> stl_file_inside;
 	std::cout << "Enter filename of outside mesh:" << std::endl;
 	std::cin >> stl_file_outside;
-	std::cout << "0 = RayTriangleIntersection, 1 = TriangleTriangleIntersection" << std::endl;
-	std::cin >> RayTriangle;
 
-	if (argc == 2) {
-		stl_file_inside = argv[1];
-	}
-	else if (argc > 2) {
-		std::cout << "ERROR: Too many command line arguments" << std::endl;
-	}
 
-	auto t1 = std::chrono::high_resolution_clock::now(); //start time measurement
+	std::string delimiter = "\\";
 
 	//Only reads STL-file in binary format!!!
-	std::cout << "lezen" << std::endl;
+	std::cout << "Reading files:" << std::endl;
 	std::unique_ptr<Mesh> triangleMesh_Inside = stl::parse_stl(stl_file_inside);
 	std::unique_ptr<Mesh> triangleMesh_Outside = stl::parse_stl(stl_file_outside);
 
-	auto t2 = std::chrono::high_resolution_clock::now(); //stop time measurement
-	auto time = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
-	std::cout << "Time = " << time << "ms" << std::endl;
+	size_t pos = 0;
+	std::string token;
+	while ((pos = stl_file_inside.find(delimiter)) != std::string::npos) {
+		token = stl_file_inside.substr(0, pos);
+		stl_file_inside.erase(0, pos + delimiter.length());
+	}
+	stl_file_inside = stl_file_inside.substr(0, stl_file_inside.find(".stl"));
 
-	std::cout << "STL HEADER = " << triangleMesh_Inside->getName() << std::endl;
-	std::cout << "# triangles = " << triangleMesh_Inside->getNumberOfTriangles() << std::endl;
-	std::cout << "# vertices = " << triangleMesh_Inside->getNumberOfVertices() << std::endl;
+	pos = 0;
+	while ((pos = stl_file_outside.find(delimiter)) != std::string::npos) {
+		token = stl_file_outside.substr(0, pos);
+		stl_file_outside.erase(0, pos + delimiter.length());
+	}
+	stl_file_outside = stl_file_outside.substr(0, stl_file_outside.find(".stl"));
 
-	//triangleMesh_Inside.schrijf();
 
-	std::cout << "STL HEADER = " << triangleMesh_Outside->getName() << std::endl;
-	std::cout << "# triangles = " << triangleMesh_Outside->getNumberOfTriangles() << std::endl;
-	std::cout << "# vertices = " << triangleMesh_Outside->getNumberOfVertices() << std::endl;
+	std::cout << "Calculating file: " << stl_file_inside << "-" << stl_file_outside << std::endl;
 
-	//triangleMesh_Outside.schrijf();
+	output.push_back(stl_file_inside + "-" + stl_file_outside + ";");
+
+	int number_of_threads;
+	std::cout << "Number of threads?" << std::endl;
+	std::cin >> number_of_threads;
+
+	//output.push_back(";RT_CPU_OpenMP(" + std::to_string(number_of_threads) + ")(ms);RT_CPU(ms);TT_CPU(ms)\n");
+
+	output.push_back(stl_file_inside + "-" + stl_file_outside + ";");
 
 	Vertex* V1 = triangleMesh_Outside->getVertexAtIndex(0);
 	Vertex* V2 = triangleMesh_Outside->getVertexAtIndex(1);
 	Vertex* V3 = triangleMesh_Outside->getVertexAtIndex(2);
 
-	float xCenter = (V1->getCoordinates()[0] + V2->getCoordinates()[0] + V3->getCoordinates()[0])/3;
-	float yCenter = (V1->getCoordinates()[1] + V2->getCoordinates()[1] + V3->getCoordinates()[1])/3;
-	float zCenter = (V1->getCoordinates()[2] + V2->getCoordinates()[2] + V3->getCoordinates()[2])/3;
+	float xCenter = (V1->getCoordinates()[0] + V2->getCoordinates()[0] + V3->getCoordinates()[0]) / 3;
+	float yCenter = (V1->getCoordinates()[1] + V2->getCoordinates()[1] + V3->getCoordinates()[1]) / 3;
+	float zCenter = (V1->getCoordinates()[2] + V2->getCoordinates()[2] + V3->getCoordinates()[2]) / 3;
 
 	float direction[3] = { xCenter, yCenter, zCenter };
-	//float direction[3] = { 1.0, 1.0, 1.0 };
 
-	std::cout << "direction = " << direction[0] << ", " << direction[1] << ", " << direction[2] << std::endl;
 
-	//auto start = std::chrono::high_resolution_clock::now(); //start time measurement
+	output.push_back(std::to_string(triangleMesh_Outside->rayTriangleIntersectOpenMP(direction, triangleMesh_Inside, number_of_threads)) + ";Number of threads: " + std::to_string(number_of_threads) + ";"); // CPU version
 
-	if (RayTriangle == 0)
-	{
-		std::cout << "Multithreading? (yes = 1, no = 0)" << std::endl;
-		std::cin >> multiThreading;
-		if (multiThreading == 1)
-		{
-			triangleMesh_Outside->rayTriangleIntersectOpenMP(direction, triangleMesh_Inside); // CPU version
-		}
-		else
-		{
-			//2 opties om unique ptr mee te geven als argument aan een functie:
-			//https://stackoverflow.com/questions/30905487/how-can-i-pass-stdunique-ptr-into-a-function
-			triangleMesh_Outside->rayTriangleIntersect(direction, triangleMesh_Inside); // CPU version
-		}
-	}
-	else
-	{
-		triangleMesh_Outside->triangleTriangleIntersect(triangleMesh_Inside);
-	}	
-	
-	//auto end = std::chrono::high_resolution_clock::now(); //stop time measurement
-	//auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-	//std::cout << "Time = " << duration << "ms" << std::endl;
+	//2 opties om unique ptr mee te geven als argument aan een functie:
+	//https://stackoverflow.com/questions/30905487/how-can-i-pass-stdunique-ptr-into-a-function
+	output.push_back(std::to_string(triangleMesh_Outside->rayTriangleIntersect(direction, triangleMesh_Inside)) + ";"); // CPU version
+
+	output.push_back(std::to_string(triangleMesh_Outside->triangleTriangleIntersect(triangleMesh_Inside)) + "\n");
+
+	writeResultsToFile(output);
 
 	std::cout << "Press Enter to quit program!" << std::endl;
 	std::cin.get();
 	std::cin.get();
 	return 0;
+}
+
+void writeResultsToFile(std::vector<std::string>& result)
+{
+	std::vector<std::string>::iterator itr;
+	std::string path = "output.csv";
+	std::ofstream ofs;
+	ofs.open(path, std::ofstream::out | std::ofstream::app);
+	for (itr = result.begin(); itr != result.end(); ++itr)
+	{
+		ofs << (*itr);
+	}
 }

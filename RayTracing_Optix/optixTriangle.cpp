@@ -46,6 +46,7 @@
 #include <iomanip>
 #include <iostream>
 #include <string>
+#include <fstream>
 
 #include <sutil/Camera.h>
 #include <sutil/Trackball.h>
@@ -90,36 +91,70 @@ static void context_log_cb( unsigned int level, const char* tag, const char* mes
     << message << "\n";
 }
 
+void writeResultsToFile(std::vector<std::string>& result)
+{
+	std::vector<std::string>::iterator itr;
+	std::string path = "output.csv";
+	std::ofstream ofs;
+	ofs.open(path, std::ofstream::out | std::ofstream::app);
+	for (itr = result.begin(); itr != result.end(); ++itr)
+	{
+		ofs << (*itr);
+	}
+}
+
+/* Console output wegschrijven naar file*/
+std::vector<std::string> output;
 
 int main( int argc, char* argv[] )
 {
+	std::string delimiter = "\\";
 	std::string stl_file_inside;
 	std::string stl_file_outside;
+
 	std::cout << "Enter filename of inside mesh:" << std::endl;
 	std::cin >> stl_file_inside;
+
 	std::cout << "Enter filename of outside mesh:" << std::endl;
 	std::cin >> stl_file_outside;
 
-	auto t1 = std::chrono::high_resolution_clock::now(); //start time measurement
+	//auto t1 = std::chrono::high_resolution_clock::now(); //start time measurement
 
 	//Only reads STL-file in binary format!!!
 	std::cout << "Reading files:" << std::endl;
 	std::unique_ptr<Mesh> triangleMesh_Inside = stl::parse_stl(stl_file_inside);
 	std::unique_ptr<Mesh> triangleMesh_Outside = stl::parse_stl_with_duplicate_vertices(stl_file_outside);
 
-	auto t2 = std::chrono::high_resolution_clock::now(); //stop time measurement
-	auto time = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
-	std::cout << "Time = " << time << " milliseconds" << std::endl;
+	size_t pos = 0;
+	std::string token;
+	while ((pos = stl_file_inside.find(delimiter)) != std::string::npos) {
+		token = stl_file_inside.substr(0, pos);
+		stl_file_inside.erase(0, pos + delimiter.length());
+	}
+	stl_file_inside = stl_file_inside.substr(0, stl_file_inside.find(".stl"));
+	output.push_back(stl_file_inside + "-");
 
-	std::cout << "STL HEADER = " << triangleMesh_Inside->getName() << std::endl;
+	pos = 0;
+	while ((pos = stl_file_outside.find(delimiter)) != std::string::npos) {
+		token = stl_file_outside.substr(0, pos);
+		stl_file_outside.erase(0, pos + delimiter.length());
+	}
+	stl_file_outside = stl_file_outside.substr(0, stl_file_outside.find(".stl"));
+	output.push_back(stl_file_outside + ";");
+
+	//auto t2 = std::chrono::high_resolution_clock::now(); //stop time measurement
+	//auto time = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
+	//std::cout << "Time = " << time << " milliseconds" << std::endl;
+
+	/*std::cout << "STL HEADER = " << triangleMesh_Inside->getName() << std::endl;
 	std::cout << "# triangles = " << triangleMesh_Inside->getNumberOfTriangles() << std::endl;
-	std::cout << "# vertices = " << triangleMesh_Inside->getNumberOfVertices() << std::endl;
+	std::cout << "# vertices = " << triangleMesh_Inside->getNumberOfVertices() << std::endl;*/
 
 	//triangleMesh_Inside.schrijf();
 
-	std::cout << "STL HEADER = " << triangleMesh_Outside->getName() << std::endl;
+	/*std::cout << "STL HEADER = " << triangleMesh_Outside->getName() << std::endl;
 	std::cout << "# triangles = " << triangleMesh_Outside->getNumberOfTriangles() << std::endl;
-	std::cout << "# vertices = " << triangleMesh_Outside->getNumberOfVertices() << std::endl;
+	std::cout << "# vertices = " << triangleMesh_Outside->getNumberOfVertices() << std::endl;*/
 
 	//triangleMesh_Outside.schrijf();
 
@@ -134,10 +169,10 @@ int main( int argc, char* argv[] )
 	float direction[3] = { xCenter, yCenter, zCenter };
 	//float direction[3] = { 1.0, 1.0, 1.0 };
 
-	std::cout << "direction = " << direction[0] << ", " << direction[1] << ", " << direction[2] << std::endl;
-	std::cout << "AnyHit (0) or ClosestHit(1)?" << std::endl;
+	//std::cout << "direction = " << direction[0] << ", " << direction[1] << ", " << direction[2] << std::endl;
+	//std::cout << "AnyHit (0) or ClosestHit(1)?" << std::endl;
 	int AH_CH = 0;
-	std::cin >> AH_CH;
+	//std::cin >> AH_CH;
 
 	//**********************************************************************************************************
 	//----------------------------------------------------------------------------------------------------------
@@ -585,7 +620,7 @@ int main( int argc, char* argv[] )
                         cudaMemcpyHostToDevice
                         ) );
 
-			std::cout << "--- Calculating ---" << std::endl;
+			//std::cout << "--- Calculating ---" << std::endl;
 			auto start = std::chrono::high_resolution_clock::now(); //start time measurement
 			
 			//printf("width: %d, height: %d", width, height);
@@ -601,7 +636,7 @@ int main( int argc, char* argv[] )
 			uchar1* hopeloos = output_buffer.getHostPointer();
 			int teller = 0;
 			for (int j = 0; j < triangleMesh_Inside->getNumberOfVertices(); j++) {
-				printf("output: %d\n", hopeloos[j].x);
+				//printf("output: %d\n", hopeloos[j].x);
 				teller += hopeloos[j].x;
 				if (hopeloos[j].x % 2 == 0) {
 					inside = false;
@@ -610,12 +645,17 @@ int main( int argc, char* argv[] )
 			}
 
 			
-			std::cout << "--- End Calculating ---" << std::endl;
+			//std::cout << "--- End Calculating ---" << std::endl;
 			auto calculatingDuration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-			std::cout << "\t\t\tTime Calculating = " << calculatingDuration << " microseconds" << std::endl;
+			std::string result;
+			if (inside) { result = "INSIDE"; }
+			else { result = "OUTSIDE"; }
+			output.push_back(std::to_string((float)calculatingDuration / 1000) + ";" + result+ "\n");
 
-			std::cout << "teller: " << teller << std::endl;
-			std::cout << "inside: " << inside << std::endl;
+			//std::cout << "\t\t\tTime Calculating = " << calculatingDuration << " microseconds" << std::endl;
+
+			//std::cout << "teller: " << teller << std::endl;
+			//std::cout << "inside: " << inside << std::endl;
         }
 			
         //
@@ -655,6 +695,8 @@ int main( int argc, char* argv[] )
 
             OPTIX_CHECK( optixDeviceContextDestroy( context ) );
         }
+
+		writeResultsToFile(output);
     }
     catch( std::exception& e )
     {
