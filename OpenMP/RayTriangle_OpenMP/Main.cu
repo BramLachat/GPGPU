@@ -58,9 +58,7 @@ int main(int argc, char* argv[]) {
 	std::cout << "Number of threads?" << std::endl;
 	std::cin >> number_of_threads;
 
-	//output.push_back(";RT_CPU_OpenMP(" + std::to_string(number_of_threads) + ")(ms);RT_CPU(ms);TT_CPU(ms)\n");
-
-	output.push_back(stl_file_inside + "-" + stl_file_outside + ";");
+	//output.push_back(";RT_CPU_OpenMP(ms);;RT_CPU(ms);TT_CPU(ms)\n");
 
 	Vertex* V1 = triangleMesh_Outside->getVertexAtIndex(0);
 	Vertex* V2 = triangleMesh_Outside->getVertexAtIndex(1);

@@ -50,9 +50,11 @@ int main()
 	std::string delimiter = "\\";
 
 	//Only reads STL-file in binary format!!!
-	std::cout << "Reading files:" << std::endl;
+	std::cout << "Reading file: triangleMesh_Inside_Point" << std::endl;
 	std::list<Point> triangleMesh_Inside_Point = parse_stl2(stl_file_inside);
+	std::cout << "Reading file: triangleMesh_Inside_Triangle" << std::endl;
 	std::list<Triangle> triangleMesh_Inside_Triangle = parse_stl(stl_file_inside);
+	std::cout << "Reading file: triangleMesh_Outside" << std::endl;
 	std::list<Triangle> triangleMesh_Outside = parse_stl(stl_file_outside);
 
 	size_t pos = 0;
