@@ -8,7 +8,7 @@
 #include <sstream>
 #include <streambuf>
 #include <memory>
-
+#include "parse_stl.h"
 #include <CGAL/Simple_cartesian.h>
 #include <CGAL/AABB_tree.h>
 #include <CGAL/AABB_traits.h>
@@ -27,11 +27,6 @@ typedef CGAL::AABB_triangle_primitive<K, Iterator> Primitive;
 typedef CGAL::AABB_traits<K, Primitive> AABB_triangle_traits;
 typedef CGAL::AABB_tree<AABB_triangle_traits> Tree;
 
-std::list<Triangle> parse_stl(const std::string& stl_path);
-std::list<Point> parse_stl2(const std::string& stl_path);
-Point parse_point(std::ifstream& s);
-float parse_float(std::ifstream& s);
-int findDuplicate(const Point& v, std::map<std::string, int>& VertexIndices);
 void writeResultsToFile(std::vector<std::string>& result);
 
 /* Console output wegschrijven naar file*/
@@ -50,12 +45,17 @@ int main()
 	std::string delimiter = "\\";
 
 	//Only reads STL-file in binary format!!!
+	std::cout << "Reading files:" << std::endl;
+	std::unique_ptr<Mesh> triangleMesh_Inside = stl::parse_stl(stl_file_inside);
+	std::unique_ptr<Mesh> triangleMesh_Outside = stl::parse_stl(stl_file_outside);
+
+	//Only reads STL-file in binary format!!!
 	std::cout << "Reading file: triangleMesh_Inside_Point" << std::endl;
-	std::list<Point> triangleMesh_Inside_Point = parse_stl2(stl_file_inside);
+	std::list<Point> triangleMesh_Inside_Point = triangleMesh_Inside->getPointList();
 	std::cout << "Reading file: triangleMesh_Inside_Triangle" << std::endl;
-	std::list<Triangle> triangleMesh_Inside_Triangle = parse_stl(stl_file_inside);
+	std::list<Triangle> triangleMesh_Inside_Triangle = triangleMesh_Inside->getTriangleList();
 	std::cout << "Reading file: triangleMesh_Outside" << std::endl;
-	std::list<Triangle> triangleMesh_Outside = parse_stl(stl_file_outside);
+	std::list<Triangle> triangleMesh_Outside_Triangle = triangleMesh_Outside->getTriangleList();
 
 	size_t pos = 0;
 	std::string token;
@@ -83,7 +83,7 @@ int main()
 								CGAL - Ray Triangle algorithm
 	***********************************************************************************************/
 
-	auto it0 = std::next(triangleMesh_Outside.begin(), 0);
+	auto it0 = std::next(triangleMesh_Outside_Triangle.begin(), 0);
 
 	Triangle t = *it0;
 
@@ -98,7 +98,7 @@ int main()
 	Point direction(xCenter, yCenter, zCenter);
 
 	// constructs AABB tree
-	Tree tree(triangleMesh_Outside.begin(), triangleMesh_Outside.end());
+	Tree tree(triangleMesh_Outside_Triangle.begin(), triangleMesh_Outside_Triangle.end());
 
 	/*for (std::list<Triangle>::iterator it = triangleMesh_Outside.begin(); it != triangleMesh_Outside.end(); ++it) {
 		std::cout << *it << std::endl;
@@ -125,12 +125,12 @@ int main()
 	}
 
 	auto t2 = std::chrono::high_resolution_clock::now(); //stop time measurement
-	auto time = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
+	auto time = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
 
 	std::string result;
 	if (inside) result = "INSIDE";
 	else result = "OUTSIDE";
-	output.push_back(std::to_string(time) + ";" + result + ";");
+	output.push_back(std::to_string((float)time/1000) + ";" + result + ";");
 
 	/*std::cout << "Time = " << time << " milliseconds" << std::endl;
 
@@ -157,17 +157,19 @@ int main()
 		//std::cout << tree.number_of_intersected_primitives(ray_query) << " intersections(s) with ray query" << std::endl;
 		intersection = tree.do_intersect(*it);
 		//std::cout << "numberOfIntersections: " << numberOfIntersections << std::endl;
-		inside = !intersection;
+		if (inside) {
+			inside = !intersection;
+		}
 		//counter += numberOfIntersections;
 		++it;
 	}
 
 	t2 = std::chrono::high_resolution_clock::now(); //stop time measurement
-	time = std::chrono::duration_cast<std::chrono::milliseconds>(t2 - t1).count();
+	time = std::chrono::duration_cast<std::chrono::microseconds>(t2 - t1).count();
 
 	if (inside) result = "INSIDE";
 	else result = "OUTSIDE";
-	output.push_back(std::to_string(time) + ";" + result + "\n");
+	output.push_back(std::to_string((float)time/1000) + ";" + result + "\n");
 
 	/*std::cout << "Time = " << time << " milliseconds" << std::endl;
 
@@ -181,131 +183,6 @@ int main()
 	std::cin.get();
 	
     return EXIT_SUCCESS;
-}
-
-std::list<Triangle> parse_stl(const std::string& stl_path) {
-
-	std::map<std::string, int> VertexIndices;
-	std::list<Point> vertices;
-	std::list<Triangle> triangles;
-
-	std::ifstream stl_file(stl_path.c_str(), std::ios::in | std::ios::binary);
-	if (!stl_file) {
-		std::cout << "ERROR: COULD NOT READ FILE" << std::endl;
-		assert(false);
-	}
-
-	char header_info[80] = "";
-	char n_triangles[4];
-	stl_file.read(header_info, 80);
-	stl_file.read(n_triangles, 4);
-	std::string h(header_info);
-	unsigned int* num_triangles = (unsigned int*)n_triangles;
-	for (unsigned int i = 0; i < *num_triangles; i++) {
-		Point p = parse_point(stl_file); //normalvector --> wordt niet gebruikt!
-		int triangleVertices[3];
-		int duplicateVertexIndex;
-		for (int i = 0; i < 3; i++)
-		{
-			Point p = parse_point(stl_file);
-			duplicateVertexIndex = findDuplicate(p, VertexIndices);//to string methode niet 2 keer oproepen
-			std::string s = std::to_string(p[0]) + std::to_string(p[1]) + std::to_string(p[2]);
-			VertexIndices.insert(std::pair<std::string, int>(s, vertices.size()));
-			if (duplicateVertexIndex == -1)
-			{
-				vertices.push_back(p);
-				triangleVertices[i] = vertices.size() - 1;
-			}
-			else
-			{
-				triangleVertices[i] = duplicateVertexIndex;
-			}
-		}
-		auto it0 = std::next(vertices.begin(), triangleVertices[0]);
-		auto it1 = std::next(vertices.begin(), triangleVertices[1]);
-		auto it2 = std::next(vertices.begin(), triangleVertices[2]);
-		triangles.push_back(Triangle(*it0, *it1, *it2));
-		char dummy[2];
-		stl_file.read(dummy, 2);
-	}
-	return triangles;
-}
-
-std::list<Point> parse_stl2(const std::string& stl_path) {
-
-	std::map<std::string, int> VertexIndices;
-	std::list<Point> vertices;
-	std::list<Triangle> triangles;
-
-	std::ifstream stl_file(stl_path.c_str(), std::ios::in | std::ios::binary);
-	if (!stl_file) {
-		std::cout << "ERROR: COULD NOT READ FILE" << std::endl;
-		assert(false);
-	}
-
-	char header_info[80] = "";
-	char n_triangles[4];
-	stl_file.read(header_info, 80);
-	stl_file.read(n_triangles, 4);
-	std::string h(header_info);
-	unsigned int* num_triangles = (unsigned int*)n_triangles;
-	for (unsigned int i = 0; i < *num_triangles; i++) {
-		Point p = parse_point(stl_file); //normalvector --> wordt niet gebruikt!
-		int triangleVertices[3];
-		int duplicateVertexIndex;
-		for (int i = 0; i < 3; i++)
-		{
-			Point p = parse_point(stl_file);
-			duplicateVertexIndex = findDuplicate(p, VertexIndices);
-			std::string s = std::to_string(p[0]) + std::to_string(p[1]) + std::to_string(p[2]);
-			VertexIndices.insert(std::pair<std::string, int>(s, vertices.size()));
-			if (duplicateVertexIndex == -1)
-			{
-				vertices.push_back(p);
-				triangleVertices[i] = vertices.size() - 1;
-			}
-			else
-			{
-				triangleVertices[i] = duplicateVertexIndex;
-			}
-		}
-		auto it0 = std::next(vertices.begin(), triangleVertices[0]);
-		auto it1 = std::next(vertices.begin(), triangleVertices[1]);
-		auto it2 = std::next(vertices.begin(), triangleVertices[2]);
-		triangles.push_back(Triangle(*it0, *it1, *it2));
-		char dummy[2];
-		stl_file.read(dummy, 2);
-	}
-	return vertices;
-}
-
-Point parse_point(std::ifstream& s) {
-	float x = parse_float(s);
-	float y = parse_float(s);
-	float z = parse_float(s);
-	Point v(x, y, z);
-	return v;
-}
-
-float parse_float(std::ifstream& s) {
-	char f_buf[sizeof(float)];
-	s.read(f_buf, 4);
-	float* fptr = (float*)f_buf;
-	return *fptr;
-}
-
-int findDuplicate(const Point& v, std::map<std::string, int>& VertexIndices)
-{
-	std::string s = std::to_string(v[0]) + std::to_string(v[1]) + std::to_string(v[2]);
-	std::map<std::string, int>::iterator itr = VertexIndices.find(s);
-	if (itr != VertexIndices.end())
-	{
-		return itr->second;
-	}
-	else
-	{
-		return -1;
-	}
 }
 
 void writeResultsToFile(std::vector<std::string>& result)
