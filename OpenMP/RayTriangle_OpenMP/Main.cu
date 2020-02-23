@@ -71,13 +71,13 @@ int main(int argc, char* argv[]) {
 	float direction[3] = { xCenter, yCenter, zCenter };
 
 
-	output.push_back(std::to_string(triangleMesh_Outside->rayTriangleIntersectOpenMP(direction, triangleMesh_Inside, number_of_threads)) + ";Number of threads: " + std::to_string(number_of_threads) + ";"); // CPU version
+	output.push_back(std::to_string((float)(triangleMesh_Outside->rayTriangleIntersectOpenMP(direction, triangleMesh_Inside, number_of_threads))/1000) + ";Number of threads: " + std::to_string(number_of_threads) + ";"); // CPU version
 
 	//2 opties om unique ptr mee te geven als argument aan een functie:
 	//https://stackoverflow.com/questions/30905487/how-can-i-pass-stdunique-ptr-into-a-function
-	output.push_back(std::to_string(triangleMesh_Outside->rayTriangleIntersect(direction, triangleMesh_Inside)) + ";"); // CPU version
+	output.push_back(std::to_string((float)(triangleMesh_Outside->rayTriangleIntersect(direction, triangleMesh_Inside))/1000) + ";"); // CPU version
 
-	output.push_back(std::to_string(triangleMesh_Outside->triangleTriangleIntersect(triangleMesh_Inside)) + "\n");
+	output.push_back(std::to_string((float)(triangleMesh_Outside->triangleTriangleIntersect(triangleMesh_Inside))/1000) + "\n");
 
 	writeResultsToFile(output);
 

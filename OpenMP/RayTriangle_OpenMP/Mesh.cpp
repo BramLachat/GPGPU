@@ -136,7 +136,7 @@ int Mesh::rayTriangleIntersectOpenMP(float dir[3], std::unique_ptr<Mesh>& innerM
 	}
 
 	auto end = std::chrono::high_resolution_clock::now(); //stop time measurement
-	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
 
 	if (inside) { std::cout << "INSIDE" << std::endl; }
 	else { std::cout << "OUTSIDE" << std::endl; }
@@ -206,7 +206,7 @@ int Mesh::rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh)
 	}
 
 	auto end = std::chrono::high_resolution_clock::now(); //stop time measurement
-	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
 	delete t; delete u; delete v;
 
 	if (inside) { std::cout << "INSIDE" << std::endl; }
@@ -243,7 +243,7 @@ int Mesh::triangleTriangleIntersect(std::unique_ptr<Mesh>& innerMesh)
 	auto start = std::chrono::high_resolution_clock::now(); //start time measurement
 
 	int j = 0;
-	while (j < innerMesh->getNumberOfTriangles() && inside)
+	while (j < innerMesh->getNumberOfTriangles()) // && inside
 	{
 		t1 = &(innerMesh->triangles.at(j));
 		vert1_1 = innerVertices->at(t1->getIndexOfVertexInMesh(0)).getCoordinates();
@@ -279,7 +279,7 @@ int Mesh::triangleTriangleIntersect(std::unique_ptr<Mesh>& innerMesh)
 	}*/
 
 	auto end = std::chrono::high_resolution_clock::now(); //stop time measurement
-	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
 
 	if (inside) { std::cout << "SNIJDEN NIET" << std::endl; }
 	else { std::cout << "SNIJDEN WEL" << std::endl; }
