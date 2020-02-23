@@ -159,13 +159,14 @@ void rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::u
 
 	//thrust::device_vector<float3> resultVertices(numberOfInsideVertices);
 	//float3* d_resultVertices = thrust::raw_pointer_cast(&resultVertices[0]);
-	/*float3* resultVertices = new float3[numberOfInsideVertices];
+	float3* resultVertices = new float3[numberOfInsideVertices];
 	float3* cudaResultVertices;
-	handleCudaError(cudaMalloc((void**)& cudaResultVertices, numberOfInsideVertices * sizeof(float3)));*/
+	handleCudaError(cudaMalloc((void**)& cudaResultVertices, numberOfInsideVertices * sizeof(float3)));
 
 	int totalIntersections = 0;
 
 	std::cout << "--- End Data Transfer ---" << std::endl;
+	cudaDeviceSynchronize();
 	end = std::chrono::high_resolution_clock::now(); //stop time measurement
 	transferDuration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
 	std::cout << "\t\t\tTime Data Transfer = " << transferDuration << "ms" << std::endl;
@@ -174,7 +175,8 @@ void rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::u
 	start = std::chrono::high_resolution_clock::now(); //start time measurement
 
 	int numberOfBlocks = numberOfInsideVertices;
-	Intersection::intersect_triangleGPU<<<numberOfBlocks,128>>>(cudaInsideOrigins, cudaDir, cudaOutsideTriangles, cudaOutsideVertices, numberOfOutsideTriangles, cudaInside); // , cudaIntersectionsPerOrigin, cudaResultVertices
+	Intersection::intersect_triangleGPU<<<numberOfBlocks,128>>>(cudaInsideOrigins, cudaDir, cudaOutsideTriangles, cudaOutsideVertices, numberOfOutsideTriangles, cudaInside, cudaResultVertices); // , cudaIntersectionsPerOrigin, cudaResultVertices
+	cudaDeviceSynchronize();
 	cudaError_t err = cudaGetLastError();
 	handleCudaError(err);
 
@@ -186,14 +188,14 @@ void rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::u
 
 	//std::vector<float3> h_resultVertices(resultVertices.size());
 	//thrust::copy(resultVertices.begin(), resultVertices.end(), h_resultVertices.begin());
-	//handleCudaError(cudaMemcpy(resultVertices, cudaResultVertices, numberOfInsideVertices * sizeof(float3), cudaMemcpyDeviceToHost));
+	handleCudaError(cudaMemcpy(resultVertices, cudaResultVertices, numberOfInsideVertices * sizeof(float3), cudaMemcpyDeviceToHost));
 
-	/*std::unique_ptr<std::vector<Vertex>> verticesToWrite = std::make_unique<std::vector<Vertex>>();
+	std::unique_ptr<std::vector<Vertex>> verticesToWrite = std::make_unique<std::vector<Vertex>>();
 	verticesToWrite->reserve(numberOfInsideVertices);
 	float x, y, z;
 	for (int i = 0; i < numberOfInsideVertices; i++)
 	{
-		totalIntersections += intersectionsPerOrigin[i];
+		//totalIntersections += intersectionsPerOrigin[i];
 		x = resultVertices[i].x;
 		y = resultVertices[i].y;
 		z = resultVertices[i].z;
@@ -202,7 +204,7 @@ void rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::u
 			verticesToWrite->emplace_back(x, y, z); 
 			inside = false;
 		}
-	}*/
+	}
 
 	std::cout << "--- End Calculating ---" << std::endl;
 	end = std::chrono::high_resolution_clock::now(); //stop time measurement
@@ -210,21 +212,21 @@ void rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::u
 	std::cout << "\t\t\tTime Calculating = " << calculatingDuration << " microseconds" << std::endl;
 	//std::cout << "\t\t\tTotal Time GPU = " << calculatingDuration+ transferDuration << "ms" << std::endl;
 
-	/*std::cout << "Writing to file!" << std::endl;
-	innerMesh->writeVerticesToFile(verticesToWrite, "OutsideVerticesCUDA.stl");*/
+	std::cout << "Writing to file!" << std::endl;
+	innerMesh->writeVerticesToFile(verticesToWrite, "OutsideVerticesCUDA.stl");
 
 	cudaFree(cudaInsideOrigins);
 	cudaFree(cudaDir);
 	cudaFree(cudaInside);
 	cudaFree(cudaOutsideTriangles);
 	cudaFree(cudaOutsideVertices);
-	/*cudaFree(cudaIntersectionsPerOrigin);
-	cudaFree(cudaResultVertices);*/
+	//cudaFree(cudaIntersectionsPerOrigin);
+	cudaFree(cudaResultVertices);
 	cudaFreeHost(insideOrigins);
 	cudaFreeHost(outsideTriangles);
 	cudaFreeHost(outsideVertices);
-	/*delete intersectionsPerOrigin;
-	delete resultVertices;*/
+	//delete intersectionsPerOrigin;
+	delete resultVertices;
 
 	std::cout << "totaal intersecties: " << totalIntersections << std::endl;
 	if (*inside) { std::cout << "INSIDE" << std::endl; }

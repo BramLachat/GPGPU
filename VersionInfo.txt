@@ -16,3 +16,5 @@ ____________________________________________________
 OpenMP: RayTriangle
 CGAL: RayTriangle + TriangleTriangle
 Optix = RayTriangle
+
+D:\Masterproef\GPGPU\Meshes_Extended\Mesh250000.stl

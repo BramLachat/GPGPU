@@ -461,7 +461,7 @@ namespace Intersection {
 
 	//block per origin
 	__global__ void intersect_triangleGPU(float3* origins, float dir[3],
-		int3* triangles, float3* vertices, int numberOfTriangles, bool* inside) // , int* intersectionsPerOrigin, float3* outsideVertices
+		int3* triangles, float3* vertices, int numberOfTriangles, bool* inside, float3* outsideVertices) // , int* intersectionsPerOrigin, float3* outsideVertices
 	{
 		int threadidx = threadIdx.x;
 		float orig[3] = { origins[blockIdx.x].x, origins[blockIdx.x].y, origins[blockIdx.x].z };
@@ -473,7 +473,7 @@ namespace Intersection {
 		int punt2;
 		int punt3;
 		while (threadidx < numberOfTriangles) {
-			if (*inside) {
+			//if (*inside) {
 				punt1 = triangles[threadidx].x;
 				punt2 = triangles[threadidx].y;
 				punt3 = triangles[threadidx].z;
@@ -486,10 +486,10 @@ namespace Intersection {
 					numberOfIntersections += 1;
 				}
 				threadidx += 128;
-			}
+			/*}
 			else {
 				return;
-			}
+			}*/
 		}
 		threadidx = threadIdx.x;
 		intersectionsPerBlock[threadidx] = numberOfIntersections;
@@ -507,10 +507,10 @@ namespace Intersection {
 			if (intersectionsPerBlock[0] % 2 == 0)
 			{
 				*inside = false;
-				return;
-				/*outsideVertices[blockIdx.x].x = orig[0];
+				//return;
+				outsideVertices[blockIdx.x].x = orig[0];
 				outsideVertices[blockIdx.x].y = orig[1];
-				outsideVertices[blockIdx.x].z = orig[2];*/
+				outsideVertices[blockIdx.x].z = orig[2];
 			}
 		}
 	}
