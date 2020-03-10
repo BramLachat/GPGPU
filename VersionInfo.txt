@@ -6,6 +6,7 @@ _v4 = thread per ray-triangle intersection
 RayTriangleGPU_v5 = block per origin
 RayTriangleGPU_v6 = thread per origin
 RayTriangleGPU_v7 = thread per triangle
+RayTriangleGPU_v8 = block per triangle (hier staat ook de beste versie van thread per triangle)
 ___________________________________________________
 
 TriangleTriangle_v1 = thread per (inner) triangle
