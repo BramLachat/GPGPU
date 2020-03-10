@@ -171,52 +171,32 @@
 		int threadidx = threadIdx.x;
 		float orig[3] = { origins[blockIdx.x].x, origins[blockIdx.x].y, origins[blockIdx.x].z };
 
-		__shared__ int intersectionsPerBlock[128];	//!!!Threads per block moet een macht van 2 zijn!!!
-													//zoniet krijg je problemen met lijn 494 (i /= 2)
+		__shared__ int intersectionsPerBlock[1];
+		intersectionsPerBlock[0] = 0;
+
 		int numberOfIntersections = 0;
-		int punt1;
-		int punt2;
-		int punt3;
+
 		while (threadidx < numberOfTriangles) {
 			//if (*inside) {
-				punt1 = triangles[threadidx].x;
-				punt2 = triangles[threadidx].y;
-				punt3 = triangles[threadidx].z;
-				float vert0[3] = { vertices[punt1].x, vertices[punt1].y, vertices[punt1].z };
-				float vert1[3] = { vertices[punt2].x, vertices[punt2].y, vertices[punt2].z };
-				float vert2[3] = { vertices[punt3].x, vertices[punt3].y, vertices[punt3].z };
-				float t, u, v;
-				if (intersect_triangle3(orig, dir, vert0, vert1, vert2, &t, &u, &v) == 1)
-				{
-					numberOfIntersections += 1;
-				}
-				threadidx += 128;
+			float vert0[3] = { vertices[triangles[threadidx].x].x, vertices[triangles[threadidx].x].y, vertices[triangles[threadidx].x].z };
+			float vert1[3] = { vertices[triangles[threadidx].y].x, vertices[triangles[threadidx].y].y, vertices[triangles[threadidx].y].z };
+			float vert2[3] = { vertices[triangles[threadidx].z].x, vertices[triangles[threadidx].z].y, vertices[triangles[threadidx].z].z };
+			float t, u, v;
+			if (intersect_triangle3(orig, dir, vert0, vert1, vert2, &t, &u, &v) == 1)
+			{
+				numberOfIntersections += 1;
+			}
+			threadidx += 128;
 			/*}
 			else {
 				return;
 			}*/
 		}
-		threadidx = threadIdx.x;
-		intersectionsPerBlock[threadidx] = numberOfIntersections;
+		atomicAdd(&intersectionsPerBlock[0], numberOfIntersections);
 		__syncthreads();
-		int i = blockDim.x / 2;
-		while (i != 0) {
-			if (threadidx < i) {
-				intersectionsPerBlock[threadidx] += intersectionsPerBlock[threadidx + i];
-			}
-			__syncthreads();
-			i /= 2;
-		}
-		if (threadidx == 0) {
-			//intersectionsPerOrigin[blockIdx.x] = intersectionsPerBlock[0];
-			if (intersectionsPerBlock[0] % 2 == 0)
-			{
-				*inside = false;
-				//return;
-				/*outsideVertices[blockIdx.x].x = orig[0];
-				outsideVertices[blockIdx.x].y = orig[1];
-				outsideVertices[blockIdx.x].z = orig[2];*/
-			}
+		if (intersectionsPerBlock[0] % 2 == 0)
+		{
+			*inside = false;
 		}
 	}
 
@@ -263,44 +243,42 @@
 	{
 		int tid = threadIdx.x + blockIdx.x * blockDim.x;
 
-		__shared__ int intersectionsPerBlock[128];
-		intersectionsPerBlock[threadIdx.x] = 0;
-
 		if (tid < numberOfTriangles)
 		{
 			float vert0[3] = { vertices[triangles[tid].x].x, vertices[triangles[tid].x].y, vertices[triangles[tid].x].z };
 			float vert1[3] = { vertices[triangles[tid].y].x, vertices[triangles[tid].y].y, vertices[triangles[tid].y].z };
 			float vert2[3] = { vertices[triangles[tid].z].x, vertices[triangles[tid].z].y, vertices[triangles[tid].z].z };
 			int i = 0;
+
 			while (i < numberOfOrigins)
 			{
 				float orig[3] = { origins[i].x, origins[i].y, origins[i].z };
 				float t, u, v;
 				if (intersect_triangle3(orig, dir, vert0, vert1, vert2, &t, &u, &v) == 1)
 				{
-					intersectionsPerBlock[threadIdx.x] = 1;
+					atomicAdd(&intersectionsPerOrigin[i], 1);
 				}
-				__syncthreads();
-				int j = blockDim.x / 2;
-				while (j != 0) {
-					if (threadIdx.x < j) {
-						intersectionsPerBlock[threadIdx.x] += intersectionsPerBlock[threadIdx.x + j]; // intersectionsPerBlock[]: Index = 0 houdt de som van alle threads binnen deze block bij
-					}
-					__syncthreads();
-					j /= 2;
-				}
-				if (threadIdx.x == 0) {
-					atomicAdd(&intersectionsPerOrigin[i], intersectionsPerBlock[0]);
-				}
-				// Als niet alle blocks tegelijk kunnen worden uitgevoerd dan zal het resultaat dat in 'intersectionsPerOrigin[i]' zit nog niet volledig zijn als deze wordt opgevraagd.
-				// Dit kan zorgen voor verkeerde resultaten als het tussenresultaat toevallig even zou zijn.
-				/*if (threadIdx.x == 0) {
-					if (intersectionsPerOrigin[i] % 2 == 0) {
-						inside = false;
-					}
-				}*/
-				intersectionsPerBlock[threadIdx.x] = 0;
 				i++;
 			}
+		}
+	}
+
+	//block per triangle
+	__global__ void intersect_triangleGPU_BlockPerTriangle(float3* origins, float dir[3],
+		int3* triangles, float3* vertices, int numberOfOrigins, int* intersectionsPerOrigin) // , int* intersectionsPerOrigin, float3* outsideVertices
+	{
+		int threadidx = threadIdx.x;
+		float vert0[3] = { vertices[triangles[blockIdx.x].x].x, vertices[triangles[blockIdx.x].x].y, vertices[triangles[blockIdx.x].x].z };
+		float vert1[3] = { vertices[triangles[blockIdx.x].y].x, vertices[triangles[blockIdx.x].y].y, vertices[triangles[blockIdx.x].y].z };
+		float vert2[3] = { vertices[triangles[blockIdx.x].z].x, vertices[triangles[blockIdx.x].z].y, vertices[triangles[blockIdx.x].z].z };
+
+		while (threadidx < numberOfOrigins) {
+			float orig[3] = { origins[threadidx].x, origins[threadidx].y, origins[threadidx].z };
+			float t, u, v;
+			if (intersect_triangle3(orig, dir, vert0, vert1, vert2, &t, &u, &v) == 1)
+			{
+				atomicAdd(&intersectionsPerOrigin[threadidx], 1);
+			}
+			threadidx += 128;
 		}
 	}

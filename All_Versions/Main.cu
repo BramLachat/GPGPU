@@ -15,6 +15,7 @@
 void rayTriangle_BlockPerOrigin(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::unique_ptr<Mesh>& outerMesh);
 void rayTriangle_ThreadPerOrigin(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::unique_ptr<Mesh>& outerMesh);
 void rayTriangle_ThreadPerTriangle(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::unique_ptr<Mesh>& outerMesh);
+void rayTriangle_BlockPerTriangle(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::unique_ptr<Mesh>& outerMesh);
 
 void TriangleTriangle_ThreadPerInnerTriangle(std::unique_ptr<Mesh>& innerMesh, std::unique_ptr<Mesh>& outerMesh);
 void TriangleTriangle_BlockPerInnerTriangle(std::unique_ptr<Mesh>& innerMesh, std::unique_ptr<Mesh>& outerMesh);
@@ -86,6 +87,7 @@ int main(int argc, char* argv[]) {
 	rayTriangle_BlockPerOrigin(direction, triangleMesh_Inside, triangleMesh_Outside);
 	rayTriangle_ThreadPerOrigin(direction, triangleMesh_Inside, triangleMesh_Outside);
 	rayTriangle_ThreadPerTriangle(direction, triangleMesh_Inside, triangleMesh_Outside);
+	rayTriangle_BlockPerTriangle(direction, triangleMesh_Inside, triangleMesh_Outside);
 
 	//triangleMesh_Outside->triangleTriangleIntersect(triangleMesh_Inside);
 
@@ -343,6 +345,101 @@ void rayTriangle_ThreadPerTriangle(float dir[3], std::unique_ptr<Mesh>& innerMes
 	else { result = "OUTSIDE"; }
 	std::cout << result << std::endl;
 	output.push_back(std::to_string(milliseconds) + ";" + result + ";" + std::to_string((float)transferDuration / 1000) + ";");
+}
+
+void rayTriangle_BlockPerTriangle(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::unique_ptr<Mesh>& outerMesh)
+{
+	std::cout << "Transfering data from cpu to gpu!" << std::endl;
+	auto start = std::chrono::high_resolution_clock::now(); //start time measurement
+
+	bool* inside = new bool;
+	*inside = true;
+	bool* cudaInside;
+	handleCudaError(cudaMalloc((void**)&cudaInside, sizeof(bool)));
+	handleCudaError(cudaMemcpy(cudaInside, inside, sizeof(bool), cudaMemcpyHostToDevice));
+
+	int numberOfOutsideTriangles = outerMesh->getNumberOfTriangles();
+	int numberOfInsideVertices = innerMesh->getNumberOfVertices();
+
+	float3* insideOrigins = innerMesh->getFloat3ArrayVertices();
+	float3* cudaInsideOrigins;
+	int sizeInsideVertices = numberOfInsideVertices * sizeof(float3);
+	handleCudaError(cudaMalloc((void**)&cudaInsideOrigins, sizeInsideVertices));
+	handleCudaError(cudaMemcpyAsync(cudaInsideOrigins, insideOrigins, sizeInsideVertices, cudaMemcpyHostToDevice));
+
+	float* cudaDir;
+	handleCudaError(cudaMalloc((void**)&cudaDir, 3 * sizeof(float)));
+	handleCudaError(cudaMemcpy(cudaDir, dir, 3 * sizeof(float), cudaMemcpyHostToDevice));
+
+	int3* outsideTriangles = outerMesh->getInt3ArrayTriangles();
+	int3* cudaOutsideTriangles;
+	int sizeOutsideTriangles = numberOfOutsideTriangles * sizeof(int3);
+	handleCudaError(cudaMalloc((void**)&cudaOutsideTriangles, sizeOutsideTriangles));
+	handleCudaError(cudaMemcpyAsync(cudaOutsideTriangles, outsideTriangles, sizeOutsideTriangles, cudaMemcpyHostToDevice));
+
+	float3* outsideVertices = outerMesh->getFloat3ArrayVertices();
+	float3* cudaOutsideVertices;
+	int sizeOutsideVertices = outerMesh->getNumberOfVertices() * sizeof(float3);
+	handleCudaError(cudaMalloc((void**)&cudaOutsideVertices, sizeOutsideVertices));
+	handleCudaError(cudaMemcpyAsync(cudaOutsideVertices, outsideVertices, sizeOutsideVertices, cudaMemcpyHostToDevice));
+
+	int* intersectionsPerOrigin = new int[numberOfInsideVertices];
+	int* cudaIntersectionsPerOrigin;
+	handleCudaError(cudaMalloc((void**)&cudaIntersectionsPerOrigin, numberOfInsideVertices * sizeof(int)));
+
+	cudaDeviceSynchronize();
+	auto end = std::chrono::high_resolution_clock::now(); //stop time measurement
+	auto transferDuration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+
+	int totalIntersections = 0;
+	std::cout << "Kernel execution: rayTriangle_BlockPerTriangle" << std::endl;
+
+	cudaEventRecord(start_event);
+	intersect_triangleGPU_BlockPerTriangle << <numberOfOutsideTriangles, 128 >> > (cudaInsideOrigins, cudaDir, cudaOutsideTriangles, cudaOutsideVertices, numberOfInsideVertices, cudaIntersectionsPerOrigin);
+	cudaEventRecord(stop_event);
+
+	cudaError_t err = cudaGetLastError();
+	handleCudaError(err);
+
+	handleCudaError(cudaMemcpy(intersectionsPerOrigin, cudaIntersectionsPerOrigin, numberOfInsideVertices * sizeof(int), cudaMemcpyDeviceToHost));
+	cudaEventSynchronize(stop_event);
+
+	int i = 0;
+	while (i < numberOfInsideVertices && inside)
+	{
+		if (intersectionsPerOrigin[i] % 2 == 0) {
+			inside = false;
+		}
+		i++;
+	}
+
+	float milliseconds = 0;
+	cudaEventElapsedTime(&milliseconds, start_event, stop_event);
+
+	for (int i = 0; i < numberOfInsideVertices; i++)
+	{
+		totalIntersections += intersectionsPerOrigin[i];
+	}
+
+	cudaFree(cudaInsideOrigins);
+	cudaFree(cudaDir);
+	cudaFree(cudaOutsideTriangles);
+	cudaFree(cudaOutsideVertices);
+	cudaFree(cudaIntersectionsPerOrigin);
+
+	cudaFreeHost(insideOrigins);
+	cudaFreeHost(outsideTriangles);
+	cudaFreeHost(outsideVertices);
+
+	delete intersectionsPerOrigin;
+
+	std::string result;
+	if (*inside) { result = "INSIDE"; }
+	else { result = "OUTSIDE"; }
+	std::cout << result << std::endl;
+	output.push_back(std::to_string(milliseconds) + ";" + result + ";" + std::to_string((float)transferDuration / 1000) + ";");
+
+	delete inside;
 }
 
 void TriangleTriangle_ThreadPerInnerTriangle(std::unique_ptr<Mesh>& innerMesh, std::unique_ptr<Mesh>& outerMesh)

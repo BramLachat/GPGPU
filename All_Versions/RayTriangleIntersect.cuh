@@ -19,4 +19,7 @@
 
 	__global__ void intersect_triangleGPU_ThreadPerTriangle(float3* origins, float dir[3],
 		int3* triangles, float3* vertices, int numberOfOrigins, int numberOfTriangles, int* intersectionsPerOrigin);
+
+	__global__ void intersect_triangleGPU_BlockPerTriangle(float3* origins, float dir[3],
+		int3* triangles, float3* vertices, int numberOfOrigins, int* intersectionsPerOrigin);
 #endif
