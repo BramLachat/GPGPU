@@ -26,6 +26,7 @@ public:
 	int rayTriangleIntersectOpenMP(float dir[3], std::unique_ptr<Mesh>& innerMesh, int number_of_threads);
 	int rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh);
 	int triangleTriangleIntersect(std::unique_ptr<Mesh>& innerMesh);
+	int triangleTriangleIntersectOpenMP(std::unique_ptr<Mesh>& innerMesh, int number_of_threads);
 	int getLastVertex();
 	void schrijf();
 	Vertex* getVertexAtIndex(int index);

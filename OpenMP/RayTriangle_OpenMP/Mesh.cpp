@@ -293,6 +293,63 @@ int Mesh::triangleTriangleIntersect(std::unique_ptr<Mesh>& innerMesh)
 	//writeTrianglesToFile(intersectingTriangles1, innerVertices, "IntersectingTriangles1.stl");
 	//writeTrianglesToFile(intersectingTriangles2, &vertices, "IntersectingTriangles2.stl");
 }
+int Mesh::triangleTriangleIntersectOpenMP(std::unique_ptr<Mesh>& innerMesh, int number_of_threads)
+{
+	//std::vector<Vertex> outermesh_vertices = vertices; //Nodig voor OpenMP ???
+	//std::vector<Triangle> outermesh_triangles = triangles; //Nodig voor OpenMP ???
+
+	omp_set_num_threads(number_of_threads);
+
+	//std::unique_ptr<std::vector<Vertex>> outsideVertices = std::make_unique<std::vector<Vertex>>(innerMesh->getNumberOfVertices());
+	bool inside = true;
+
+	auto start = std::chrono::high_resolution_clock::now(); //start time measurement
+
+#pragma omp parallel
+	{
+
+		float* vert1_1;
+		float* vert1_2;
+		float* vert1_3;
+		float* vert2_1;
+		float* vert2_2;
+		float* vert2_3;
+		Triangle* t1;
+		Triangle* t2;
+		//std::vector<Vertex>* innerVertices = &(innerMesh->vertices);
+
+#pragma omp for schedule(static)
+		for (int j = 0 ; j < innerMesh->getNumberOfTriangles() ; j++)
+		{
+			t1 = &(innerMesh->triangles.at(j));
+			vert1_1 = innerMesh->vertices.at(t1->getIndexOfVertexInMesh(0)).getCoordinates();
+			vert1_2 = innerMesh->vertices.at(t1->getIndexOfVertexInMesh(1)).getCoordinates();
+			vert1_3 = innerMesh->vertices.at(t1->getIndexOfVertexInMesh(2)).getCoordinates();
+
+			//int numberOfIntersections = 0;
+
+			for (int i = 0; i < triangles.size(); i++)
+			{
+				t2 = &(triangles.at(i));
+				vert2_1 = vertices.at(t2->getIndexOfVertexInMesh(0)).getCoordinates();
+				vert2_2 = vertices.at(t2->getIndexOfVertexInMesh(1)).getCoordinates();
+				vert2_3 = vertices.at(t2->getIndexOfVertexInMesh(2)).getCoordinates();
+				if (Intersection::NoDivTriTriIsect(vert1_1, vert1_2, vert1_3, vert2_1, vert2_2, vert2_3) == 1)
+				{
+					inside = false;
+				}
+			}
+		}
+	}
+
+	auto end = std::chrono::high_resolution_clock::now(); //stop time measurement
+	auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+
+	if (inside) { std::cout << "SNIJDEN NIET" << std::endl; }
+	else { std::cout << "SNIJDEN WEL" << std::endl; }
+
+	return (int)duration;
+}
 int Mesh::getLastVertex()
 {
 	return (vertices.size() - 1);

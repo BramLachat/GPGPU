@@ -77,6 +77,8 @@ int main(int argc, char* argv[]) {
 	//https://stackoverflow.com/questions/30905487/how-can-i-pass-stdunique-ptr-into-a-function
 	output.push_back(std::to_string((float)(triangleMesh_Outside->rayTriangleIntersect(direction, triangleMesh_Inside))/1000) + ";"); // CPU version
 
+	output.push_back(std::to_string((float)(triangleMesh_Outside->triangleTriangleIntersectOpenMP(triangleMesh_Inside, number_of_threads)) / 1000) + ";Number of threads: " + std::to_string(number_of_threads) + ";"); // CPU version
+
 	output.push_back(std::to_string((float)(triangleMesh_Outside->triangleTriangleIntersect(triangleMesh_Inside))/1000) + "\n");
 
 	writeResultsToFile(output);
