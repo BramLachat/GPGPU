@@ -57,3 +57,6 @@ Varia/
 RayTriangleGPU_v8/.vs/
 RayTriangleGPU_v8/bin/
 RayTriangleGPU_v8/x64/
+OpenMP/RT_TT_OpenMP/.vs/
+OpenMP/RT_TT_OpenMP/bin/
+OpenMP/RT_TT_OpenMP/x64/

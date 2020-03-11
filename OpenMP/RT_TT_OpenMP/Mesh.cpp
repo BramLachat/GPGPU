@@ -62,58 +62,60 @@ int Mesh::findDuplicate(const Vertex& v)
 }
 int Mesh::rayTriangleIntersectOpenMP(float dir[3], std::unique_ptr<Mesh>& innerMesh, int number_of_threads)
 {
-	std::vector<Vertex> outermesh_vertices = vertices; //Nodig voor OpenMP
-	std::vector<Triangle> outermesh_triangles = triangles; //Nodig voor OpenMP
+	//std::vector<Vertex> outermesh_vertices = vertices; //Nodig voor OpenMP
+	//std::vector<Triangle> outermesh_triangles = triangles; //Nodig voor OpenMP
 
 	omp_set_num_threads(number_of_threads);
 
-	std::unique_ptr<std::vector<Vertex>> outsideVertices = std::make_unique<std::vector<Vertex>>(innerMesh->getNumberOfVertices());
+	//std::unique_ptr<std::vector<Vertex>> outsideVertices = std::make_unique<std::vector<Vertex>>(innerMesh->getNumberOfVertices());
 	bool inside = true;
-	std::unique_ptr<std::vector<int>> totalIntersections = std::make_unique<std::vector<int>>(number_of_threads);
-	int totaalAantalIntersecties = 0;
+	//std::unique_ptr<std::vector<int>> totalIntersections = std::make_unique<std::vector<int>>(number_of_threads);
+	//int totaalAantalIntersecties = 0;
 
 	auto start = std::chrono::high_resolution_clock::now(); //start time measurement
 
-#pragma omp parallel shared(innerMesh,outermesh_vertices,outermesh_triangles,totalIntersections,outsideVertices)
+#pragma omp parallel //shared(innerMesh,outermesh_vertices,outermesh_triangles,totalIntersections,outsideVertices)
 	{
 
 		//std::unique_ptr<float[]> orig = std::make_unique<float[]>(3); //smart pointer
 		//std::vector<float> orig;
-		float* t = new float;
-		float* u = new float;
-		float* v = new float;
-		Vertex* V1;
-		Vertex* V2;
-		Vertex* V3;
+		float t = 0;
+		float u = 0;
+		float v = 0;
+		//Vertex* V1;
+		//Vertex* V2;
+		//Vertex* V3;
 		float* vert1;
 		float* vert2;
 		float* vert3;
 		float* orig;
+		Triangle* t1;
 		//float dirPerPoint[3];
-		int tid = omp_get_thread_num();
-		totalIntersections->at(tid) = 0;
+		//int tid = omp_get_thread_num();
+		//totalIntersections->at(tid) = 0;
 
-		Vertex* innerVertex;
+		//Vertex* innerVertex;
 
 		//std::cout << "\t\t\tCalculating intersections! (CPU)" << std::endl;
 
 #pragma omp for schedule(static)
 		for (int j = 0; j < innerMesh->getNumberOfVertices(); j++)
 		{
-			innerVertex = &(innerMesh->vertices.at(j));
-			orig = innerVertex->getCoordinates();
+			//innerVertex = &(innerMesh->vertices.at(j));
+			orig = innerMesh->vertices.at(j).getCoordinates();
 
 			int numberOfIntersections = 0;
 
 			for (int i = 0; i < triangles.size(); i++)
 			{
-				V1 = &(vertices.at(triangles.at(i).getIndexOfVertexInMesh(0)));
-				V2 = &(vertices.at(triangles.at(i).getIndexOfVertexInMesh(1)));
-				V3 = &(vertices.at(triangles.at(i).getIndexOfVertexInMesh(2)));
-				vert1 = V1->getCoordinates();
-				vert2 = V2->getCoordinates();
-				vert3 = V3->getCoordinates();
-				if (Intersection::intersect_triangleCPU(orig, dir, vert1, vert2, vert3, t, u, v) == 1)
+				//V1 = &(vertices.at(triangles.at(i).getIndexOfVertexInMesh(0)));
+				//V2 = &(vertices.at(triangles.at(i).getIndexOfVertexInMesh(1)));
+				//V3 = &(vertices.at(triangles.at(i).getIndexOfVertexInMesh(2)));
+				t1 = &(triangles.at(i));
+				vert1 = vertices.at(t1->getIndexOfVertexInMesh(0)).getCoordinates();
+				vert2 = vertices.at(t1->getIndexOfVertexInMesh(1)).getCoordinates();
+				vert3 = vertices.at(t1->getIndexOfVertexInMesh(2)).getCoordinates();
+				if (Intersection::intersect_triangleCPU(orig, dir, vert1, vert2, vert3, &t, &u, &v) == 1)
 				{
 					numberOfIntersections++;
 				}
@@ -132,7 +134,7 @@ int Mesh::rayTriangleIntersectOpenMP(float dir[3], std::unique_ptr<Mesh>& innerM
 			}
 			totaalAantalIntersecties = totalIntersections->at(0);
 		}*/
-		delete t; delete u; delete v;
+		//delete t; delete u; delete v;
 	}
 
 	auto end = std::chrono::high_resolution_clock::now(); //stop time measurement
