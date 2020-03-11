@@ -1,5 +1,6 @@
 #include <cassert>
 #include <iostream>
+#include <fstream>
 #include <chrono>
 #include <cuda_runtime.h>
 #include <cuda_runtime_api.h>
@@ -13,11 +14,17 @@
 #include "TriangleTriangleIntersect.cuh"
 
 void rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::unique_ptr<Mesh>& outerMesh);
+void rayTriangleIntersect_v2(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::unique_ptr<Mesh>& outerMesh);
 void TriangleTriangleIntersect(std::unique_ptr<Mesh>& innerMesh, std::unique_ptr<Mesh>& outerMesh);
 void handleCudaError(cudaError_t cudaERR);
 __global__ void startGPU();
 
+std::ofstream outfile;
+
 int main(int argc, char* argv[]) {
+
+	outfile.open("file.csv", std::ios::app);
+
 	std::string stl_file_inside;
 	std::string stl_file_outside;
 	std::cout << "Enter filename of inside mesh:" << std::endl;
@@ -71,6 +78,7 @@ int main(int argc, char* argv[]) {
 	//auto start = std::chrono::high_resolution_clock::now(); //start time measurement
 
 	rayTriangleIntersect(direction, triangleMesh_Inside, triangleMesh_Outside);	
+	rayTriangleIntersect_v2(direction, triangleMesh_Inside, triangleMesh_Outside);
 	
 	//auto end = std::chrono::high_resolution_clock::now(); //stop time measurement
 	//auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
@@ -79,6 +87,8 @@ int main(int argc, char* argv[]) {
 	std::cout << "Press Enter to quit program!" << std::endl;
 	std::cin.get();
 	std::cin.get();
+
+	outfile.close();
 	return 0;
 }
 
@@ -197,11 +207,182 @@ void rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::u
 		i++;
 	}
 
-	std::cout << "--- End Calculating ---" << std::endl;
 	end = std::chrono::high_resolution_clock::now(); //stop time measurement
+	std::cout << "--- End Calculating ---" << std::endl;
 	auto calculatingDuration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
 	std::cout << "\t\t\tTime Calculating = " << calculatingDuration << " microseconds" << std::endl;
+
+	outfile << std::to_string(calculatingDuration) + ";";
+
 	//std::cout << "\t\t\tTotal Time GPU = " << calculatingDuration + transferDuration << "ms" << std::endl;
+
+	for (int i = 0; i < numberOfInsideVertices; i++)
+	{
+		totalIntersections += intersectionsPerOrigin[i];
+	}
+
+	/*std::cout << "Writing to file!" << std::endl;
+
+	std::unique_ptr<std::vector<Vertex>> verticesToWrite = std::make_unique<std::vector<Vertex>>();
+	verticesToWrite->reserve(numberOfInsideVertices);
+	float x, y, z;
+	for (int i = 0; i < numberOfInsideVertices; i++)
+	{
+		totalIntersections += intersectionsPerOrigin[i];
+		x = resultVertices[i].x;
+		y = resultVertices[i].y;
+		z = resultVertices[i].z;
+		if (x + y + z != 0)
+		{
+			verticesToWrite->emplace_back(x, y, z);
+			inside = false;
+		}
+	}
+
+	innerMesh->writeVerticesToFile(verticesToWrite, "OutsideVerticesCUDA.stl");*/
+
+	cudaFree(cudaInsideOrigins);
+	cudaFree(cudaDir);
+	cudaFree(cudaOutsideTriangles);
+	cudaFree(cudaOutsideVertices);
+	cudaFree(cudaIntersectionsPerOrigin);
+	//cudaFree(cudaResultVertices);
+	cudaFreeHost(insideOrigins);
+	cudaFreeHost(outsideTriangles);
+	cudaFreeHost(outsideVertices);
+	//delete insideOrigins;
+	//delete outsideTriangles;
+	//delete outsideVertices;
+	delete intersectionsPerOrigin;
+	//delete resultVertices;
+
+	std::cout << "totaal intersecties: " << totalIntersections << std::endl;
+	if (inside) { std::cout << "INSIDE" << std::endl; }
+	else { std::cout << "OUTSIDE" << std::endl; }
+}
+
+void rayTriangleIntersect_v2(float dir[3], std::unique_ptr<Mesh>& innerMesh, std::unique_ptr<Mesh>& outerMesh)
+{
+	auto start = std::chrono::high_resolution_clock::now(); //start time measurement
+	startGPU << <1, 1 >> > ();
+	cudaDeviceSynchronize();
+	auto end = std::chrono::high_resolution_clock::now(); //stop time measurement
+	auto transferDuration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+	std::cout << "\t\t\tStartup time GPU = " << transferDuration << " milliseconds" << std::endl;
+
+	std::cout << "\t\t\tCalculating intersections! (GPU)" << std::endl;
+	std::cout << "--- Data Transfer ---" << std::endl;
+	start = std::chrono::high_resolution_clock::now(); //start time measurement
+
+	bool inside = true;
+	int numberOfOutsideTriangles = outerMesh->getNumberOfTriangles();
+	int numberOfInsideVertices = innerMesh->getNumberOfVertices();
+
+	//nodig om in kernel te controleren dat aantal keer dat test wordt uitgevoerd <= is dan het aantal driehoeken
+	//int numberOfCudaCalculations = numberOfInsideVertices * numberOfOutsideTriangles;
+
+	//bool* threadResult;
+	//handleCudaError(cudaMalloc((void**)& threadResult, numberOfCudaCalculations*sizeof(bool)));
+
+	/*thrust::host_vector<float3> insideOrigins = innerMesh->getVerticesVector();
+	thrust::device_vector<float3> cudaInsideOrigins(insideOrigins.size());
+	cudaInsideOrigins = insideOrigins;
+	thrust::device_ptr<float3> d_cudaInsideOrigins = cudaInsideOrigins.data();
+	float3* deviceInsideOrigins = thrust::raw_pointer_cast(d_cudaInsideOrigins);*/
+
+	float3* insideOrigins = innerMesh->getFloat3ArrayVertices();
+	float3* cudaInsideOrigins;
+	int sizeInsideVertices = numberOfInsideVertices * sizeof(float3);
+	//handleCudaError(cudaMallocManaged((void**)& cudaInsideOrigins, sizeInsideVertices));
+	//memcpy(cudaInsideOrigins, insideOrigins, sizeInsideVertices);  waarschijnlijk moet ik zoiets ook nog doen bij cudaHostAlloc???
+	handleCudaError(cudaMalloc((void**)&cudaInsideOrigins, sizeInsideVertices));
+	handleCudaError(cudaMemcpyAsync(cudaInsideOrigins, insideOrigins, sizeInsideVertices, cudaMemcpyHostToDevice));
+
+	float* cudaDir;
+	//handleCudaError(cudaMallocManaged((void**)& cudaDir, 3*sizeof(float)));
+	//memcpy(cudaDir, dir, 3 * sizeof(float));
+	handleCudaError(cudaMalloc((void**)&cudaDir, 3 * sizeof(float)));
+	handleCudaError(cudaMemcpy(cudaDir, dir, 3 * sizeof(float), cudaMemcpyHostToDevice));
+
+	/*thrust::host_vector<int3> outsideTriangles = outerMesh->getTrianglesVector();;
+	thrust::device_vector<int3> cudaOutsideTriangles(outsideTriangles.size());
+	cudaOutsideTriangles = outsideTriangles;
+	thrust::device_ptr<int3> d_cudaOutsideTriangles = cudaOutsideTriangles.data();
+	int3* deviceOutsideTriangles = thrust::raw_pointer_cast(d_cudaOutsideTriangles);*/
+
+	int3* outsideTriangles = outerMesh->getInt3ArrayTriangles();
+	int3* cudaOutsideTriangles;
+	int sizeOutsideTriangles = numberOfOutsideTriangles * sizeof(int3);
+	//handleCudaError(cudaMallocManaged((void**)& cudaOutsideTriangles, sizeOutsideTriangles));
+	//memcpy(cudaOutsideTriangles, outsideTriangles, sizeOutsideTriangles);
+	handleCudaError(cudaMalloc((void**)&cudaOutsideTriangles, sizeOutsideTriangles));
+	handleCudaError(cudaMemcpyAsync(cudaOutsideTriangles, outsideTriangles, sizeOutsideTriangles, cudaMemcpyHostToDevice));
+
+	/*thrust::host_vector<float3> outsideVertices = outerMesh->getVerticesVector();
+	thrust::device_vector<float3> cudaOutsideVertices(outsideVertices.size());
+	cudaOutsideVertices = outsideVertices;
+	thrust::device_ptr<float3> d_cudaOutsideVertices = cudaOutsideVertices.data();
+	float3* deviceOutsideVertices = thrust::raw_pointer_cast(d_cudaOutsideVertices);*/
+
+	float3* outsideVertices = outerMesh->getFloat3ArrayVertices();
+	float3* cudaOutsideVertices;
+	int sizeOutsideVertices = outerMesh->getNumberOfVertices() * sizeof(float3);
+	//handleCudaError(cudaMallocManaged((void**)& cudaOutsideVertices, sizeOutsideVertices));
+	//memcpy(cudaOutsideVertices, outsideVertices, sizeOutsideVertices);
+	handleCudaError(cudaMalloc((void**)&cudaOutsideVertices, sizeOutsideVertices));
+	handleCudaError(cudaMemcpyAsync(cudaOutsideVertices, outsideVertices, sizeOutsideVertices, cudaMemcpyHostToDevice));
+
+	//thrust::device_vector<int> intersectionsPerOrigin(numberOfInsideVertices);
+	//int* d_intersectionsPerOrigin = thrust::raw_pointer_cast(&intersectionsPerOrigin[0]);
+	int* intersectionsPerOrigin = new int[numberOfInsideVertices];
+	int* cudaIntersectionsPerOrigin;
+	handleCudaError(cudaMalloc((void**)&cudaIntersectionsPerOrigin, numberOfInsideVertices * sizeof(int)));
+
+	//thrust::device_vector<float3> resultVertices(numberOfInsideVertices);
+	//float3* d_resultVertices = thrust::raw_pointer_cast(&resultVertices[0]);
+	/*float3* resultVertices = new float3[numberOfInsideVertices];
+	float3* cudaResultVertices;
+	handleCudaError(cudaMalloc((void**)& cudaResultVertices, numberOfInsideVertices * sizeof(float3)));*/
+
+	int totalIntersections = 0;
+
+	std::cout << "--- End Data Transfer ---" << std::endl;
+	end = std::chrono::high_resolution_clock::now(); //stop time measurement
+	transferDuration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+	std::cout << "\t\t\tTime Data Transfer = " << transferDuration << " milliseconds" << std::endl;
+
+	std::cout << "--- Calculating ---" << std::endl;
+	start = std::chrono::high_resolution_clock::now(); //start time measurement
+
+	int numberOfBlocks = ((int)((numberOfOutsideTriangles + 127) / 128));
+	Intersection::intersect_triangleGPU_v2<< <numberOfBlocks, 128 >> > (cudaInsideOrigins, cudaDir, cudaOutsideTriangles, cudaOutsideVertices, numberOfInsideVertices, numberOfOutsideTriangles, cudaIntersectionsPerOrigin);
+	cudaError_t err = cudaGetLastError();
+	handleCudaError(err);
+
+	//std::vector<int> h_intersectionsPerOrigin(intersectionsPerOrigin.size());
+	//hrust::copy(intersectionsPerOrigin.begin(), intersectionsPerOrigin.end(), h_intersectionsPerOrigin.begin());
+	handleCudaError(cudaMemcpy(intersectionsPerOrigin, cudaIntersectionsPerOrigin, numberOfInsideVertices * sizeof(int), cudaMemcpyDeviceToHost));
+
+	//std::vector<float3> h_resultVertices(resultVertices.size());
+	//thrust::copy(resultVertices.begin(), resultVertices.end(), h_resultVertices.begin());
+	//handleCudaError(cudaMemcpy(resultVertices, cudaResultVertices, numberOfInsideVertices * sizeof(float3), cudaMemcpyDeviceToHost));
+
+	int i = 0;
+	while (i < numberOfInsideVertices && inside)
+	{
+		if (intersectionsPerOrigin[i] % 2 == 0) {
+			inside = false;
+		}
+		i++;
+	}
+
+	end = std::chrono::high_resolution_clock::now(); //stop time measurement
+	std::cout << "--- End Calculating ---" << std::endl;
+	auto calculatingDuration = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+	std::cout << "\t\t\tTime Calculating v2= " << calculatingDuration << " microseconds" << std::endl;
+	//std::cout << "\t\t\tTotal Time GPU = " << calculatingDuration + transferDuration << "ms" << std::endl;
+
+	outfile << std::to_string(calculatingDuration) + "\n";
 
 	for (int i = 0; i < numberOfInsideVertices; i++)
 	{

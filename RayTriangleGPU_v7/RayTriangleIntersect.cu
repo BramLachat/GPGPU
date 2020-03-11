@@ -513,4 +513,56 @@ namespace Intersection {
 			}
 		}
 	}
+
+	//thread per triangle versie 2
+	__global__ void intersect_triangleGPU_v2(float3* origins, float dir[3],
+		int3* triangles, float3* vertices, int numberOfOrigins, int numberOfTriangles, int* intersectionsPerOrigin)
+	{
+		int tid = threadIdx.x + blockIdx.x * blockDim.x;
+
+		//__shared__ int intersectionsPerBlock[128];
+		//intersectionsPerBlock[threadIdx.x] = 0;
+
+		if (tid < numberOfTriangles)
+		{
+			float vert0[3] = { vertices[triangles[tid].x].x, vertices[triangles[tid].x].y, vertices[triangles[tid].x].z };
+			float vert1[3] = { vertices[triangles[tid].y].x, vertices[triangles[tid].y].y, vertices[triangles[tid].y].z };
+			float vert2[3] = { vertices[triangles[tid].z].x, vertices[triangles[tid].z].y, vertices[triangles[tid].z].z };
+			int i = tid%numberOfOrigins;
+			int teller = 0;
+
+			while (teller < numberOfOrigins)
+			{
+				float orig[3] = { origins[i].x, origins[i].y, origins[i].z };
+				float t, u, v;
+				if (intersect_triangle3(orig, dir, vert0, vert1, vert2, &t, &u, &v) == 1)
+				{
+					atomicAdd(&intersectionsPerOrigin[i], 1);
+				}
+				/*__syncthreads();
+				int j = blockDim.x / 2;
+				while (j != 0) {
+					if (threadIdx.x < j) {
+						intersectionsPerBlock[threadIdx.x] += intersectionsPerBlock[threadIdx.x + j]; // intersectionsPerBlock[]: Index = 0 houdt de som van alle threads binnen deze block bij
+					}
+					__syncthreads();
+					j /= 2;
+				}*/
+				/*if (threadIdx.x == 0) {
+					atomicAdd(&intersectionsPerOrigin[i], intersectionsPerBlock[0]);
+				}*/
+				// Als niet alle blocks tegelijk kunnen worden uitgevoerd dan zal het resultaat dat in 'intersectionsPerOrigin[i]' zit nog niet volledig zijn als deze wordt opgevraagd.
+				// Dit kan zorgen voor verkeerde resultaten als het tussenresultaat toevallig even zou zijn.
+				/*if (threadIdx.x == 0) {
+					if (intersectionsPerOrigin[i] % 2 == 0) {
+						inside = false;
+					}
+				}*/
+				//intersectionsPerBlock[threadIdx.x] = 0;
+				i++;
+				teller++;
+				i = i % numberOfOrigins;
+			}
+		}
+	}
 }
