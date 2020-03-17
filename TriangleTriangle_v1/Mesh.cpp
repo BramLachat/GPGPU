@@ -163,7 +163,9 @@ void Mesh::rayTriangleIntersect(float dir[3], std::unique_ptr<Mesh>& innerMesh)
 }
 void Mesh::triangleTriangleIntersect(std::unique_ptr<Mesh>& innerMesh)
 {
-	auto start = std::chrono::high_resolution_clock::now(); //start time measurement
+	int2* intervalArray;
+	cudaError_t status = cudaHostAlloc((void**)&intervalArray, innerMesh->getNumberOfTriangles() * sizeof(int2), cudaHostAllocDefault);
+	if (status != cudaSuccess) printf("Error allocating pinned host memory\n");
 
 	float* vert1_1;
 	float* vert1_2;
@@ -174,24 +176,17 @@ void Mesh::triangleTriangleIntersect(std::unique_ptr<Mesh>& innerMesh)
 	Triangle* t1;
 	Triangle* t2;
 	std::vector<Vertex>* innerVertices = &(innerMesh->vertices);
+	int start = -1;
+	int end = -1;
 
-	std::unique_ptr<std::vector<Triangle>> intersectingTriangles1 = std::make_unique<std::vector<Triangle>>();
-	std::unique_ptr<std::vector<Triangle>> intersectingTriangles2 = std::make_unique<std::vector<Triangle>>();
+	int teller = 0;
 
-	bool inside = true;
-	int totalIntersections = 0;
-
-	std::cout << "\t\t\tCalculating intersecting triangles! (CPU)" << std::endl;
-
-	int j = 0;
-	while(j < innerMesh->getNumberOfTriangles() && inside)
+	for (int j = 0; j < innerMesh->getNumberOfTriangles(); j++)
 	{
 		t1 = &(innerMesh->triangles.at(j));
 		vert1_1 = innerVertices->at(t1->getIndexOfVertexInMesh(0)).getCoordinates();
 		vert1_2 = innerVertices->at(t1->getIndexOfVertexInMesh(1)).getCoordinates();
 		vert1_3 = innerVertices->at(t1->getIndexOfVertexInMesh(2)).getCoordinates();
-
-		//int numberOfIntersections = 0;
 
 		for (int i = 0; i < triangles.size(); i++)
 		{
@@ -199,36 +194,26 @@ void Mesh::triangleTriangleIntersect(std::unique_ptr<Mesh>& innerMesh)
 			vert2_1 = vertices.at(t2->getIndexOfVertexInMesh(0)).getCoordinates();
 			vert2_2 = vertices.at(t2->getIndexOfVertexInMesh(1)).getCoordinates();
 			vert2_3 = vertices.at(t2->getIndexOfVertexInMesh(2)).getCoordinates();
-			if (NoDivTriTriIsect(vert1_1, vert1_2, vert1_3, vert2_1, vert2_2, vert2_3) == 1)
+			if (BPCD(vert1_1, vert1_2, vert1_3, vert2_1, vert2_2, vert2_3) == 1)
 			{
-				//list printed with intersecting triangles
-				//intersectingTriangles1->push_back(*t1);
-				//intersectingTriangles2->push_back(*t2);
-
-				//numberOfIntersections++;
-				inside = false;
-				break;
+				if (start == -1) {
+					start = i;
+				}
+				end = i + 1;
+				teller++;
 			}
 		}
-		j++;
-		//totalIntersections += numberOfIntersections;
-		//std::cout << "aantal intersecties = " << numberOfIntersections << std::endl;
+		if (start != -1) {
+			intervalArray[j] = make_int2(start, end);
+		}
+		else {
+			intervalArray[j] = make_int2(0, 0);
+		}
+
+		start = -1;
 	}
-	/*if (totalIntersections != 0)
-	{
-		inside = false;
-	}*/
-	std::cout << "Aantal intersecties: " << totalIntersections << std::endl;
-	if (inside) { std::cout << "SNIJDEN NIET" << std::endl; }
-	else { std::cout << "SNIJDEN WEL" << std::endl; }
-
-	auto end = std::chrono::high_resolution_clock::now(); //stop time measurement
-	auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-	std::cout << "\t\t\tTime CPU = " << duration << "ms" << std::endl;
-
-	std::cout << "Writing to file!" << std::endl;
-	writeTrianglesToFile(intersectingTriangles1, innerVertices, "IntersectingTriangles1.stl");
-	writeTrianglesToFile(intersectingTriangles2, &vertices, "IntersectingTriangles2.stl");
+	std::cout << "teller: " << teller << std::endl;
+	//return intervalArray;
 }
 int Mesh::getLastVertex()
 {
