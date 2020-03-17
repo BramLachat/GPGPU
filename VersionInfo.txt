@@ -14,7 +14,7 @@ TriangleTriangle_v2 = block per (inner) triangle
 TriangleTriangle_v3 = thread per (outer) triangle
 ____________________________________________________
 
-OpenMP: RayTriangle
+OpenMP: RayTriangle + TriangleTriangle
 CGAL: RayTriangle + TriangleTriangle
 Optix = RayTriangle
 
