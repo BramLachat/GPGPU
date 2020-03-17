@@ -398,7 +398,7 @@ __host__ __device__ int BPCD(float V0[3], float V1[3], float V2[3],
 	}
 
 	//thread per (inner) triangle
-	__global__ void triangle_triangle_GPU_BPCD(int3* cudaInsideTriangles, float3* cudaInsideVertices, int3* cudaOutsideTriangles, float3* cudaOutsideVertices, bool* inside, int numberOfInsideTriangles, int* intersectingTriangles, int* triangleIndices) {
+	__global__ void triangle_triangle_GPU_BPCD_3_2(int3* cudaInsideTriangles, float3* cudaInsideVertices, int3* cudaOutsideTriangles, float3* cudaOutsideVertices, bool* inside, int numberOfInsideTriangles, int* intersectingTriangles, int* triangleIndices) {
 		int tid = threadIdx.x + blockIdx.x * blockDim.x;
 		if (tid < numberOfInsideTriangles)
 		{
@@ -442,7 +442,7 @@ __host__ __device__ int BPCD(float V0[3], float V1[3], float V2[3],
 	}
 
 	//thread per (inner) triangle
-	__global__ void triangle_triangle_GPU_BPCD_Part1(int3* cudaInsideTriangles, float3* cudaInsideVertices, int3* cudaOutsideTriangles, float3* cudaOutsideVertices, int numberOfInsideTriangles, int numberOfOutsideTriangles, int* intersectingTriangles, int* triangleIndices, int* size) {
+	__global__ void triangle_triangle_GPU_BPCD_3_1(int3* cudaInsideTriangles, float3* cudaInsideVertices, int3* cudaOutsideTriangles, float3* cudaOutsideVertices, int numberOfInsideTriangles, int numberOfOutsideTriangles, int* intersectingTriangles, int* triangleIndices, int* size) {
 		int tid = threadIdx.x + blockIdx.x * blockDim.x;
 		int start = 0;
 		int end = 0;
@@ -514,7 +514,7 @@ __host__ __device__ int BPCD(float V0[3], float V1[3], float V2[3],
 		}
 	}
 
-	__global__ void BPCD_get_intersecting_triangles(int3* cudaInsideTriangles, float3* cudaInsideVertices, int3* cudaOutsideTriangles, float3* cudaOutsideVertices, int numberOfInsideTriangles, int numberOfOutsideTriangles, int* intersectingTriangles) {
+	__global__ void triangle_triangle_GPU_BPCD_2_1(int3* cudaInsideTriangles, float3* cudaInsideVertices, int3* cudaOutsideTriangles, float3* cudaOutsideVertices, int numberOfInsideTriangles, int numberOfOutsideTriangles, int* intersectingTriangles) {
 		int tid = threadIdx.x + blockIdx.x * blockDim.x;
 		int start = 0;
 		int end = 0;
@@ -551,7 +551,7 @@ __host__ __device__ int BPCD(float V0[3], float V1[3], float V2[3],
 		}
 	}
 
-	__global__ void BPCD_test_intersecting_triangles(int3* cudaInsideTriangles, float3* cudaInsideVertices, int3* cudaOutsideTriangles, float3* cudaOutsideVertices, bool* inside, int numberOfInsideTriangles, int* intersectingTriangles) {
+	__global__ void triangle_triangle_GPU_BPCD_2_2(int3* cudaInsideTriangles, float3* cudaInsideVertices, int3* cudaOutsideTriangles, float3* cudaOutsideVertices, bool* inside, int numberOfInsideTriangles, int* intersectingTriangles) {
 		int tid = threadIdx.x + blockIdx.x * blockDim.x;
 		if (tid < numberOfInsideTriangles)
 		{
@@ -592,5 +592,64 @@ __host__ __device__ int BPCD(float V0[3], float V1[3], float V2[3],
 			}
 
 			
+		}
+	}
+
+	__global__ void triangle_triangle_GPU_BPCD_1_1(int3* cudaInsideTriangles, float3* cudaInsideVertices, int3* cudaOutsideTriangles, float3* cudaOutsideVertices, int numberOfInsideTriangles, int numberOfOutsideTriangles, int2* cudaIntervals) {
+		int tid = threadIdx.x + blockIdx.x * blockDim.x;
+		int start = -1;
+		int end = -1;
+		if (tid < numberOfInsideTriangles)
+		{
+			float vert1_1[3] = { cudaInsideVertices[cudaInsideTriangles[tid].x].x, cudaInsideVertices[cudaInsideTriangles[tid].x].y, cudaInsideVertices[cudaInsideTriangles[tid].x].z };
+			float vert1_2[3] = { cudaInsideVertices[cudaInsideTriangles[tid].y].x, cudaInsideVertices[cudaInsideTriangles[tid].y].y, cudaInsideVertices[cudaInsideTriangles[tid].y].z };
+			float vert1_3[3] = { cudaInsideVertices[cudaInsideTriangles[tid].z].x, cudaInsideVertices[cudaInsideTriangles[tid].z].y, cudaInsideVertices[cudaInsideTriangles[tid].z].z };
+
+			for (int i = 0; i < numberOfOutsideTriangles; i++)
+			{
+
+				float vert2_1[3] = { cudaOutsideVertices[cudaOutsideTriangles[i].x].x, cudaOutsideVertices[cudaOutsideTriangles[i].x].y, cudaOutsideVertices[cudaOutsideTriangles[i].x].z };
+				float vert2_2[3] = { cudaOutsideVertices[cudaOutsideTriangles[i].y].x, cudaOutsideVertices[cudaOutsideTriangles[i].y].y, cudaOutsideVertices[cudaOutsideTriangles[i].y].z };
+				float vert2_3[3] = { cudaOutsideVertices[cudaOutsideTriangles[i].z].x, cudaOutsideVertices[cudaOutsideTriangles[i].z].y, cudaOutsideVertices[cudaOutsideTriangles[i].z].z };
+				if (BPCD(vert1_1, vert1_2, vert1_3, vert2_1, vert2_2, vert2_3) == 1)
+				{
+					if (start == -1) {
+						start = i;
+					}
+					end = i + 1;
+				}
+			}
+			if (start != -1) {
+				cudaIntervals[tid].x = start;
+				cudaIntervals[tid].y = end;
+			}
+			else {
+				cudaIntervals[tid].x = 0;
+				cudaIntervals[tid].y = 0;
+			}
+		}
+	}
+
+	__global__ void triangle_triangle_GPU_BPCD_1_2(int3* cudaInsideTriangles, float3* cudaInsideVertices, int3* cudaOutsideTriangles, float3* cudaOutsideVertices, bool* inside, int numberOfInsideTriangles, int2* cudaIntervals) {
+		int tid = threadIdx.x + blockIdx.x * blockDim.x;
+		if (tid < numberOfInsideTriangles)
+		{
+			float vert1_1[3] = { cudaInsideVertices[cudaInsideTriangles[tid].x].x, cudaInsideVertices[cudaInsideTriangles[tid].x].y, cudaInsideVertices[cudaInsideTriangles[tid].x].z };
+			float vert1_2[3] = { cudaInsideVertices[cudaInsideTriangles[tid].y].x, cudaInsideVertices[cudaInsideTriangles[tid].y].y, cudaInsideVertices[cudaInsideTriangles[tid].y].z };
+			float vert1_3[3] = { cudaInsideVertices[cudaInsideTriangles[tid].z].x, cudaInsideVertices[cudaInsideTriangles[tid].z].y, cudaInsideVertices[cudaInsideTriangles[tid].z].z };
+
+			int start = cudaIntervals[tid].x;
+			int end = cudaIntervals[tid].y;
+
+			for (int i = start; i < end; i++)
+			{
+				float vert2_1[3] = { cudaOutsideVertices[cudaOutsideTriangles[i].x].x, cudaOutsideVertices[cudaOutsideTriangles[i].x].y, cudaOutsideVertices[cudaOutsideTriangles[i].x].z };
+				float vert2_2[3] = { cudaOutsideVertices[cudaOutsideTriangles[i].y].x, cudaOutsideVertices[cudaOutsideTriangles[i].y].y, cudaOutsideVertices[cudaOutsideTriangles[i].y].z };
+				float vert2_3[3] = { cudaOutsideVertices[cudaOutsideTriangles[i].z].x, cudaOutsideVertices[cudaOutsideTriangles[i].z].y, cudaOutsideVertices[cudaOutsideTriangles[i].z].z };
+				if (NoDivTriTriIsect(vert1_1, vert1_2, vert1_3, vert2_1, vert2_2, vert2_3) == 1)
+				{
+					*inside = false;
+				}
+			}
 		}
 	}
