@@ -186,7 +186,7 @@
 			{
 				numberOfIntersections += 1;
 			}
-			threadidx += 128;
+			threadidx += blockDim.x;
 			/*}
 			else {
 				return;
@@ -279,6 +279,6 @@
 			{
 				atomicAdd(&intersectionsPerOrigin[threadidx], 1);
 			}
-			threadidx += 128;
+			threadidx += blockDim.x;
 		}
 	}
