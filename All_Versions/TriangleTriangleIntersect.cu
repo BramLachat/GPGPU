@@ -735,7 +735,7 @@
 		}
 		else {
 			int i = intersectingTriangles[blockIdx.x * 10 + threadIdx.x];
-			while (i != 0 && threadIdx.x < 10)
+			if (i != 0 && threadIdx.x < 10)
 			{
 				float vert2_1[3] = { cudaOutsideVertices[cudaOutsideTriangles[i].x].x, cudaOutsideVertices[cudaOutsideTriangles[i].x].y, cudaOutsideVertices[cudaOutsideTriangles[i].x].z };
 				float vert2_2[3] = { cudaOutsideVertices[cudaOutsideTriangles[i].y].x, cudaOutsideVertices[cudaOutsideTriangles[i].y].y, cudaOutsideVertices[cudaOutsideTriangles[i].y].z };
@@ -778,7 +778,7 @@
 		}
 		else {
 			int i = intersectingTriangles[blockIdx.x * 10 + threadIdx.x];
-			while (i != 0 && threadIdx.x < 10)
+			if (i != 0 && threadIdx.x < 10)
 			{
 				float vert2_1[3] = { cudaInsideVertices[cudaInsideTriangles[i].x].x, cudaInsideVertices[cudaInsideTriangles[i].x].y, cudaInsideVertices[cudaInsideTriangles[i].x].z };
 				float vert2_2[3] = { cudaInsideVertices[cudaInsideTriangles[i].y].x, cudaInsideVertices[cudaInsideTriangles[i].y].y, cudaInsideVertices[cudaInsideTriangles[i].y].z };

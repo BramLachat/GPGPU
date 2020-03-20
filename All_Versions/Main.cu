@@ -105,16 +105,16 @@ int main(int argc, char* argv[]) {
 					threads = threads * 2;
 				}*/
 
-	TriangleTriangle_ThreadPerInnerTriangle(triangleMesh_Inside, triangleMesh_Outside); // GPU version
+	//TriangleTriangle_ThreadPerInnerTriangle(triangleMesh_Inside, triangleMesh_Outside); // GPU version
 	TriangleTriangle_ThreadPerInnerTriangle_BPCD(triangleMesh_Inside, triangleMesh_Outside); // GPU version
 
-	TriangleTriangle_BlockPerInnerTriangle(triangleMesh_Inside, triangleMesh_Outside); // GPU version
+	//TriangleTriangle_BlockPerInnerTriangle(triangleMesh_Inside, triangleMesh_Outside); // GPU version
 	TriangleTriangle_BlockPerInnerTriangle_BPCD(triangleMesh_Inside, triangleMesh_Outside); // GPU version
 
-	TriangleTriangle_ThreadPerOuterTriangle(triangleMesh_Inside, triangleMesh_Outside); // GPU version
+	//TriangleTriangle_ThreadPerOuterTriangle(triangleMesh_Inside, triangleMesh_Outside); // GPU version
 	TriangleTriangle_ThreadPerOuterTriangle_BPCD(triangleMesh_Inside, triangleMesh_Outside); // GPU version
 
-	TriangleTriangle_BlockPerOuterTriangle(triangleMesh_Inside, triangleMesh_Outside); // GPU version
+	//TriangleTriangle_BlockPerOuterTriangle(triangleMesh_Inside, triangleMesh_Outside); // GPU version
 	TriangleTriangle_BlockPerOuterTriangle_BPCD(triangleMesh_Inside, triangleMesh_Outside); // GPU version
 
 	output.push_back("\n");
@@ -617,7 +617,7 @@ void TriangleTriangle_ThreadPerInnerTriangle_BPCD(std::unique_ptr<Mesh>& innerMe
 
 	/* Als deze waarde > 0 ==> De binnenste mesh ligt niet volledig in de buitenste mesh*/
 	int totalIntersections = 0;
-	std::cout << "Kernel execution: TriangleTriangle_ThreadPerInnerTriangle" << std::endl;
+	std::cout << "Kernel execution: TriangleTriangle_ThreadPerInnerTriangle_BPCD" << std::endl;
 
 	/*******************************************************************************
 	Uitvoeren CUDA kernel - Triangle Triangle met Broad Phase Collision Detection
@@ -655,7 +655,7 @@ void TriangleTriangle_ThreadPerInnerTriangle_BPCD(std::unique_ptr<Mesh>& innerMe
 		result = "SNIJDEN WEL";
 	}
 	std::cout << result << std::endl;
-	output.push_back(std::to_string(milliseconds_1) + ";" + std::to_string(milliseconds_2) + ";" + result + ";" + std::to_string((float)transferDuration / 1000) + ";");
+	output.push_back(std::to_string(milliseconds_1) + ";" + std::to_string(milliseconds_2) + ";" + std::to_string(milliseconds_1 + milliseconds_2) + ";" + result + ";" + std::to_string((float)transferDuration / 1000) + ";");
 
 	cudaFree(cudaInsideTriangles);
 	cudaFree(cudaInsideVertices);
@@ -824,7 +824,7 @@ void TriangleTriangle_BlockPerInnerTriangle_BPCD(std::unique_ptr<Mesh>& innerMes
 
 	/* Als deze waarde > 0 ==> De binnenste mesh ligt niet volledig in de buitenste mesh*/
 	int totalIntersections = 0;
-	std::cout << "Kernel execution: TriangleTriangle_ThreadPerInnerTriangle" << std::endl;
+	std::cout << "Kernel execution: TriangleTriangle_BlockPerInnerTriangle_BPCD" << std::endl;
 
 	/*******************************************************************************
 	Uitvoeren CUDA kernel - Triangle Triangle met Broad Phase Collision Detection
@@ -862,7 +862,7 @@ void TriangleTriangle_BlockPerInnerTriangle_BPCD(std::unique_ptr<Mesh>& innerMes
 		result = "SNIJDEN WEL";
 	}
 	std::cout << result << std::endl;
-	output.push_back(std::to_string(milliseconds_1) + ";" + std::to_string(milliseconds_2) + ";" + result + ";" + std::to_string((float)transferDuration / 1000) + ";");
+	output.push_back(std::to_string(milliseconds_1) + ";" + std::to_string(milliseconds_2) + ";" + std::to_string(milliseconds_1 + milliseconds_2) + ";" + result + ";" + std::to_string((float)transferDuration / 1000) + ";");
 
 	cudaFree(cudaInsideTriangles);
 	cudaFree(cudaInsideVertices);
@@ -1022,7 +1022,7 @@ void TriangleTriangle_ThreadPerOuterTriangle_BPCD(std::unique_ptr<Mesh>& innerMe
 
 	/* Alloceren voor mogelijke driehoeken die kunnen snijden uit BPCD op GPU*/
 	int* intersectingTriangles;
-	int sizeIntersectingTriangles = numberOfInsideTriangles * 10 * sizeof(int);
+	int sizeIntersectingTriangles = numberOfOutsideTriangles * 10 * sizeof(int);
 	handleCudaError(cudaMalloc((void**)&intersectingTriangles, sizeIntersectingTriangles));
 
 	cudaDeviceSynchronize();
@@ -1031,7 +1031,7 @@ void TriangleTriangle_ThreadPerOuterTriangle_BPCD(std::unique_ptr<Mesh>& innerMe
 
 	/* Als deze waarde > 0 ==> De binnenste mesh ligt niet volledig in de buitenste mesh*/
 	int totalIntersections = 0;
-	std::cout << "Kernel execution: TriangleTriangle_ThreadPerInnerTriangle" << std::endl;
+	std::cout << "Kernel execution: TriangleTriangle_ThreadPerOuterTriangle_BPCD" << std::endl;
 
 	/*******************************************************************************
 	Uitvoeren CUDA kernel - Triangle Triangle met Broad Phase Collision Detection
@@ -1069,7 +1069,8 @@ void TriangleTriangle_ThreadPerOuterTriangle_BPCD(std::unique_ptr<Mesh>& innerMe
 		result = "SNIJDEN WEL";
 	}
 	std::cout << result << std::endl;
-	output.push_back(std::to_string(milliseconds_1) + ";" + std::to_string(milliseconds_2) + ";" + result + ";" + std::to_string((float)transferDuration / 1000) + ";");
+	output.push_back(std::to_string(milliseconds_1) + ";" + std::to_string(milliseconds_2) + ";" + std::to_string(milliseconds_1 + milliseconds_2) + ";" + result + ";" + std::to_string((float)transferDuration / 1000) + ";");
+
 
 	cudaFree(cudaInsideTriangles);
 	cudaFree(cudaInsideVertices);
@@ -1229,7 +1230,7 @@ void TriangleTriangle_BlockPerOuterTriangle_BPCD(std::unique_ptr<Mesh>& innerMes
 
 	/* Alloceren voor mogelijke driehoeken die kunnen snijden uit BPCD op GPU*/
 	int* intersectingTriangles;
-	int sizeIntersectingTriangles = numberOfInsideTriangles * 10 * sizeof(int);
+	int sizeIntersectingTriangles = numberOfOutsideTriangles * 10 * sizeof(int);
 	handleCudaError(cudaMalloc((void**)&intersectingTriangles, sizeIntersectingTriangles));
 
 	cudaDeviceSynchronize();
@@ -1238,7 +1239,7 @@ void TriangleTriangle_BlockPerOuterTriangle_BPCD(std::unique_ptr<Mesh>& innerMes
 
 	/* Als deze waarde > 0 ==> De binnenste mesh ligt niet volledig in de buitenste mesh*/
 	int totalIntersections = 0;
-	std::cout << "Kernel execution: TriangleTriangle_ThreadPerInnerTriangle" << std::endl;
+	std::cout << "Kernel execution: TriangleTriangle_BlockPerOuterTriangle_BPCD" << std::endl;
 
 	/*******************************************************************************
 	Uitvoeren CUDA kernel - Triangle Triangle met Broad Phase Collision Detection
@@ -1276,7 +1277,8 @@ void TriangleTriangle_BlockPerOuterTriangle_BPCD(std::unique_ptr<Mesh>& innerMes
 		result = "SNIJDEN WEL";
 	}
 	std::cout << result << std::endl;
-	output.push_back(std::to_string(milliseconds_1) + ";" + std::to_string(milliseconds_2) + ";" + result + ";" + std::to_string((float)transferDuration / 1000) + ";");
+	output.push_back(std::to_string(milliseconds_1) + ";" + std::to_string(milliseconds_2) + ";" + std::to_string(milliseconds_1 + milliseconds_2) + ";" + result + ";" + std::to_string((float)transferDuration / 1000) + ";");
+
 
 	cudaFree(cudaInsideTriangles);
 	cudaFree(cudaInsideVertices);
