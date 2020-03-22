@@ -622,7 +622,8 @@
 				int start = intersectingTriangles[tid * 10 + 1];
 				int end = intersectingTriangles[tid * 10 + 2];
 
-				for (int i = start; i < end; i++)
+				int i = start;
+				while(i < end && *inside)//for (int i = start; i < end; i++)
 				{
 					float vert2_1[3] = { cudaOutsideVertices[cudaOutsideTriangles[i].x].x, cudaOutsideVertices[cudaOutsideTriangles[i].x].y, cudaOutsideVertices[cudaOutsideTriangles[i].x].z };
 					float vert2_2[3] = { cudaOutsideVertices[cudaOutsideTriangles[i].y].x, cudaOutsideVertices[cudaOutsideTriangles[i].y].y, cudaOutsideVertices[cudaOutsideTriangles[i].y].z };
@@ -630,13 +631,15 @@
 					if (NoDivTriTriIsect(vert1_1, vert1_2, vert1_3, vert2_1, vert2_2, vert2_3) == 1)
 					{
 						*inside = false;
+						return;
 					}
+					i++;
 				}
 			}
 			else {
 				int counter = 0;
 				int i = intersectingTriangles[tid * 10 + counter];
-				while (i != 0 && counter < 10)
+				while (i != 0 && counter < 10 && *inside)
 				{
 					float vert2_1[3] = { cudaOutsideVertices[cudaOutsideTriangles[i].x].x, cudaOutsideVertices[cudaOutsideTriangles[i].x].y, cudaOutsideVertices[cudaOutsideTriangles[i].x].z };
 					float vert2_2[3] = { cudaOutsideVertices[cudaOutsideTriangles[i].y].x, cudaOutsideVertices[cudaOutsideTriangles[i].y].y, cudaOutsideVertices[cudaOutsideTriangles[i].y].z };
@@ -644,6 +647,7 @@
 					if (NoDivTriTriIsect(vert1_1, vert1_2, vert1_3, vert2_1, vert2_2, vert2_3) == 1)
 					{
 						*inside = false;
+						return;
 					}
 					counter++;
 					i = intersectingTriangles[tid * 10 + counter];
@@ -673,7 +677,8 @@
 				int start = intersectingTriangles[tid * 10 + 1];
 				int end = intersectingTriangles[tid * 10 + 2];
 
-				for (int i = start; i < end; i++)
+				int i = start;
+				while(i < end && *inside)//for (int i = start; i < end; i++)
 				{
 					float vert2_1[3] = { cudaInsideVertices[cudaInsideTriangles[i].x].x, cudaInsideVertices[cudaInsideTriangles[i].x].y, cudaInsideVertices[cudaInsideTriangles[i].x].z };
 					float vert2_2[3] = { cudaInsideVertices[cudaInsideTriangles[i].y].x, cudaInsideVertices[cudaInsideTriangles[i].y].y, cudaInsideVertices[cudaInsideTriangles[i].y].z };
@@ -681,13 +686,15 @@
 					if (NoDivTriTriIsect(vert1_1, vert1_2, vert1_3, vert2_1, vert2_2, vert2_3) == 1)
 					{
 						*inside = false;
+						return;
 					}
+					i++;
 				}
 			}
 			else {
 				int counter = 0;
 				int i = intersectingTriangles[tid * 10 + counter];
-				while (i != 0 && counter < 10)
+				while (i != 0 && counter < 10 && *inside)
 				{
 					float vert2_1[3] = { cudaInsideVertices[cudaInsideTriangles[i].x].x, cudaInsideVertices[cudaInsideTriangles[i].x].y, cudaInsideVertices[cudaInsideTriangles[i].x].z };
 					float vert2_2[3] = { cudaInsideVertices[cudaInsideTriangles[i].y].x, cudaInsideVertices[cudaInsideTriangles[i].y].y, cudaInsideVertices[cudaInsideTriangles[i].y].z };
@@ -695,6 +702,7 @@
 					if (NoDivTriTriIsect(vert1_1, vert1_2, vert1_3, vert2_1, vert2_2, vert2_3) == 1)
 					{
 						*inside = false;
+						return;
 					}
 					counter++;
 					i = intersectingTriangles[tid * 10 + counter];
@@ -721,7 +729,7 @@
 			int start = intersectingTriangles[blockIdx.x * 10 + 1];
 			int end = intersectingTriangles[blockIdx.x * 10 + 2];
 			int i = threadIdx.x + start;
-			while (i < end)
+			while (i < end && *inside)
 			{
 				float vert2_1[3] = { cudaOutsideVertices[cudaOutsideTriangles[i].x].x, cudaOutsideVertices[cudaOutsideTriangles[i].x].y, cudaOutsideVertices[cudaOutsideTriangles[i].x].z };
 				float vert2_2[3] = { cudaOutsideVertices[cudaOutsideTriangles[i].y].x, cudaOutsideVertices[cudaOutsideTriangles[i].y].y, cudaOutsideVertices[cudaOutsideTriangles[i].y].z };
@@ -729,13 +737,14 @@
 				if (NoDivTriTriIsect(vert1_1, vert1_2, vert1_3, vert2_1, vert2_2, vert2_3) == 1)
 				{
 					*inside = false;
+					return;
 				}
 				i += blockDim.x;
 			}
 		}
 		else {
 			int i = intersectingTriangles[blockIdx.x * 10 + threadIdx.x];
-			if (i != 0 && threadIdx.x < 10)
+			if (i != 0 && threadIdx.x < 10 && *inside)
 			{
 				float vert2_1[3] = { cudaOutsideVertices[cudaOutsideTriangles[i].x].x, cudaOutsideVertices[cudaOutsideTriangles[i].x].y, cudaOutsideVertices[cudaOutsideTriangles[i].x].z };
 				float vert2_2[3] = { cudaOutsideVertices[cudaOutsideTriangles[i].y].x, cudaOutsideVertices[cudaOutsideTriangles[i].y].y, cudaOutsideVertices[cudaOutsideTriangles[i].y].z };
@@ -743,6 +752,7 @@
 				if (NoDivTriTriIsect(vert1_1, vert1_2, vert1_3, vert2_1, vert2_2, vert2_3) == 1)
 				{
 					*inside = false;
+					return;
 				}
 			}
 		}
@@ -764,7 +774,7 @@
 			int start = intersectingTriangles[blockIdx.x * 10 + 1];
 			int end = intersectingTriangles[blockIdx.x * 10 + 2];
 			int i = threadIdx.x + start;
-			while (i < end)
+			while (i < end && *inside)
 			{
 				float vert2_1[3] = { cudaInsideVertices[cudaInsideTriangles[i].x].x, cudaInsideVertices[cudaInsideTriangles[i].x].y, cudaInsideVertices[cudaInsideTriangles[i].x].z };
 				float vert2_2[3] = { cudaInsideVertices[cudaInsideTriangles[i].y].x, cudaInsideVertices[cudaInsideTriangles[i].y].y, cudaInsideVertices[cudaInsideTriangles[i].y].z };
@@ -772,13 +782,14 @@
 				if (NoDivTriTriIsect(vert1_1, vert1_2, vert1_3, vert2_1, vert2_2, vert2_3) == 1)
 				{
 					*inside = false;
+					return;
 				}
 				i += blockDim.x;
 			}
 		}
 		else {
 			int i = intersectingTriangles[blockIdx.x * 10 + threadIdx.x];
-			if (i != 0 && threadIdx.x < 10)
+			if (i != 0 && threadIdx.x < 10 && *inside)
 			{
 				float vert2_1[3] = { cudaInsideVertices[cudaInsideTriangles[i].x].x, cudaInsideVertices[cudaInsideTriangles[i].x].y, cudaInsideVertices[cudaInsideTriangles[i].x].z };
 				float vert2_2[3] = { cudaInsideVertices[cudaInsideTriangles[i].y].x, cudaInsideVertices[cudaInsideTriangles[i].y].y, cudaInsideVertices[cudaInsideTriangles[i].y].z };
@@ -786,6 +797,7 @@
 				if (NoDivTriTriIsect(vert1_1, vert1_2, vert1_3, vert2_1, vert2_2, vert2_3) == 1)
 				{
 					*inside = false;
+					return;
 				}
 			}
 		}
