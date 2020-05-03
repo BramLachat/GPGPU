@@ -386,7 +386,7 @@ if %errorlevel% neq 0 goto :VCEnd</Command>
     <ClCompile Include="parse_stl.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="D:\Masterproef\GPGPU\RT_TT_CGAL\ZERO_CHECK.vcxproj">
+    <ProjectReference Include="ZERO_CHECK.vcxproj">
       <Project>{9474A131-2220-35E3-A303-B105B7517973}</Project>
       <Name>ZERO_CHECK</Name>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
