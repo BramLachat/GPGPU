@@ -1,0 +1,22 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="16.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="C:\Tools\vcpkg\CGAL-5.0\examples\AABB_tree\AABB_triangle_3_example.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="C:\Tools\vcpkg\CGAL-5.0\examples\AABB_tree\build\Mesh.cpp" />
+    <ClCompile Include="C:\Tools\vcpkg\CGAL-5.0\examples\AABB_tree\build\parse_stl.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="C:\Tools\vcpkg\CGAL-5.0\examples\AABB_tree\CMakeLists.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{A85C1D2B-5F0D-3AAD-89B1-7244055C987B}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="C:\Tools\vcpkg\CGAL-5.0\examples\AABB_tree\build\Mesh.h" />
+    <ClInclude Include="C:\Tools\vcpkg\CGAL-5.0\examples\AABB_tree\build\parse_stl.h" />
+  </ItemGroup>
+</Project>
