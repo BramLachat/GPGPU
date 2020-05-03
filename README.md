@@ -1,5 +1,8 @@
 # GPGPU
 
+### Update (30/04/2020):
+De belangrijkste mappen zijn `All_Versions`, `OpenMP/RT_TT_OpenMP`, `RT_TT_CGAL` en `RayTracing_Optix`.
+
 ### 1) Requirements:
   - Voor de zekerheid de laatste versie van NVIDIA Driver downloaden: [Download Drivers](https://www.nvidia.com/Download/index.aspx?lang=en-us)
   - CUDA Toolkit: [Download CUDA Toolkit 10.1](https://developer.nvidia.com/cuda-downloads)
